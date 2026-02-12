@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sentinel CRM</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'DM Sans', sans-serif; background: #0f172a; overflow: hidden; }
+    #root { width: 100vw; height: 100vh; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useCallback, useMemo } = React;
+
+    // Inline SVG Icon Components - no external dependency needed
+    const Icon = (props) => React.createElement('svg', {
+      xmlns: 'http://www.w3.org/2000/svg', width: props.size || 24, height: props.size || 24,
+      viewBox: '0 0 24 24', fill: 'none', stroke: props.color || 'currentColor',
+      strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round',
+      style: props.style, className: props.className
+    }, ...(props.children || []));
+    const p = (d) => React.createElement('path', { d, key: d.slice(0,10) });
+    const c = (cx,cy,r) => React.createElement('circle', { cx, cy, r, key: `c${cx}${cy}` });
+    const l = (x1,y1,x2,y2) => React.createElement('line', { x1, y1, x2, y2, key: `l${x1}${y1}` });
+    const r = (x,y,w,h,rx) => React.createElement('rect', { x, y, width:w, height:h, rx, key: `r${x}${y}` });
+    const pl = (pts) => React.createElement('polyline', { points: pts, key: `pl${pts.slice(0,8)}` });
+
+    const Search = (pr) => <Icon {...pr}>{[c(11,11,8), l(21,21,16.65,16.65)]}</Icon>;
+    const Plus = (pr) => <Icon {...pr}>{[l(12,5,12,19), l(5,12,19,12)]}</Icon>;
+    const Building2 = (pr) => <Icon {...pr}>{[p("M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"), p("M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"), p("M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"), p("M10 6h4"), p("M10 10h4"), p("M10 14h4"), p("M10 18h4")]}</Icon>;
+    const Phone = (pr) => <Icon {...pr}>{[p("M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z")]}</Icon>;
+    const Mail = (pr) => <Icon {...pr}>{[r(2,4,20,16,2), pl("2 4 12 13 22 4")]}</Icon>;
+    const MapPin = (pr) => <Icon {...pr}>{[p("M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"), c(12,10,3)]}</Icon>;
+    const Calendar = (pr) => <Icon {...pr}>{[r(3,4,18,18,2), l(16,2,16,6), l(8,2,8,6), l(3,10,21,10)]}</Icon>;
+    const Clock = (pr) => <Icon {...pr}>{[c(12,12,10), pl("12 6 12 12 16 14")]}</Icon>;
+    const ChevronRight = (pr) => <Icon {...pr}>{[pl("9 18 15 12 9 6")]}</Icon>;
+    const ChevronLeft = (pr) => <Icon {...pr}>{[pl("15 18 9 12 15 6")]}</Icon>;
+    const ArrowLeft = (pr) => <Icon {...pr}>{[l(19,12,5,12), pl("12 19 5 12 12 5")]}</Icon>;
+    const Edit2 = (pr) => <Icon {...pr}>{[p("M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z")]}</Icon>;
+    const Trash2 = (pr) => <Icon {...pr}>{[pl("3 6 5 6 21 6"), p("M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"), l(10,11,10,17), l(14,11,14,17)]}</Icon>;
+    const CheckCircle = (pr) => <Icon {...pr}>{[p("M22 11.08V12a10 10 0 1 1-5.93-9.14"), pl("22 4 12 14.01 9 11.01")]}</Icon>;
+    const Bell = (pr) => <Icon {...pr}>{[p("M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"), p("M13.73 21a2 2 0 0 1-3.46 0")]}</Icon>;
+    const TrendingUp = (pr) => <Icon {...pr}>{[pl("23 6 13.5 15.5 8.5 10.5 1 18"), pl("17 6 23 6 23 12")]}</Icon>;
+    const Users = (pr) => <Icon {...pr}>{[p("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"), c(9,7,4), p("M23 21v-2a4 4 0 0 0-3-3.87"), p("M16 3.13a4 4 0 0 1 0 7.75")]}</Icon>;
+    const Shield = (pr) => <Icon {...pr}>{[p("M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z")]}</Icon>;
+    const X = (pr) => <Icon {...pr}>{[l(18,6,6,18), l(6,6,18,18)]}</Icon>;
+    const Save = (pr) => <Icon {...pr}>{[p("M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"), pl("17 21 17 13 7 13 7 21"), pl("7 3 7 8 15 8")]}</Icon>;
+    const MessageSquare = (pr) => <Icon {...pr}>{[p("M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z")]}</Icon>;
+    const PhoneCall = (pr) => <Icon {...pr}>{[p("M15.05 5A5 5 0 0 1 19 8.95M15.05 1A9 9 0 0 1 23 8.94m-1 7.98v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z")]}</Icon>;
+    const Send = (pr) => <Icon {...pr}>{[l(22,2,11,13), p("M22 2 15 22 11 13 2 9l20-7z")]}</Icon>;
+    const BarChart3 = (pr) => <Icon {...pr}>{[l(18,20,18,10), l(12,20,12,4), l(6,20,6,14)]}</Icon>;
+    const Download = (pr) => <Icon {...pr}>{[p("M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"), pl("7 10 12 15 17 10"), l(12,15,12,3)]}</Icon>;
+    const Target = (pr) => <Icon {...pr}>{[c(12,12,10), c(12,12,6), c(12,12,2)]}</Icon>;
+    const UserPlus = (pr) => <Icon {...pr}>{[p("M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"), c(8.5,7,4), l(20,8,20,14), l(23,11,17,11)]}</Icon>;
+    const Zap = (pr) => <Icon {...pr}>{[p("M13 2 3 14h9l-1 8 10-12h-9l1-8z")]}</Icon>;
+    const PieChart = (pr) => <Icon {...pr}>{[p("M21.21 15.89A10 10 0 1 1 8 2.83"), p("M22 12A10 10 0 0 0 12 2v10z")]}</Icon>;
+    const Car = (pr) => <Icon {...pr}>{[p("M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"), c(6.5,16.5,2.5), c(16.5,16.5,2.5)]}</Icon>;
+    const User = (pr) => <Icon {...pr}>{[p("M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"), c(12,7,4)]}</Icon>;
+
+const STORAGE_KEY = "sentinel-crm-v2";
+const COVERAGE_TYPES_COMMERCIAL = ["General Liability", "BOP", "Workers Comp", "Commercial Auto", "Umbrella", "Professional Liability", "Inland Marine", "Property", "Cyber", "EPLI", "Other"];
+const COVERAGE_TYPES_PERSONAL = ["Auto", "Homeowners", "Renters", "Condo", "Umbrella", "Flood", "Motorcycle", "Boat/Watercraft", "Life", "Other"];
+const CARRIERS = ["Allstate", "Hartford", "Travelers", "CNA", "Progressive Commercial", "EMPLOYERS", "AmTrust", "Nationwide", "Liberty Mutual", "Citizens", "Universal", "Slide", "Heritage", "Other"];
+const ACTIVITY_TYPES = ["Phone Call", "Email", "In-Person Meeting", "Quote Sent", "Policy Review", "Renewal Follow-up", "Referral", "BNI Contact", "Cold Call", "Note"];
+const INDUSTRIES = ["Restaurant/Food Service", "Retail", "Construction", "Healthcare", "Childcare", "Professional Services", "Real Estate", "Auto Services", "Pest Control", "Manufacturing", "Technology", "Cleaning Services", "Landscaping", "Salon/Barbershop", "Other"];
+const PIPELINE_STAGES = ["New Lead", "Contacted", "Quote Sent", "Follow-Up", "Negotiating", "Won", "Lost"];
+const LEAD_SOURCES = ["BNI Referral", "Client Referral", "Walk-In", "Website", "Social Media", "Cold Call", "Allstate Lead", "Google", "Door-to-Door", "Networking Event", "Other"];
+const LINE_TYPES = ["Personal", "Commercial"];
+
+const STAGE_COLORS = {
+  "New Lead": { bg: "#1e3a5f", fg: "#7dd3fc" },
+  "Contacted": { bg: "#1e293b", fg: "#94a3b8" },
+  "Quote Sent": { bg: "#78350f", fg: "#fcd34d" },
+  "Follow-Up": { bg: "#4c1d95", fg: "#c4b5fd" },
+  "Negotiating": { bg: "#0c4a6e", fg: "#38bdf8" },
+  "Won": { bg: "#14532d", fg: "#86efac" },
+  "Lost": { bg: "#7f1d1d", fg: "#fca5a5" },
+};
+
+const NAV_ITEMS = [
+  { key: "dashboard", label: "Dashboard", Icon: BarChart3 },
+  { key: "clients", label: "Clients", Icon: Building2 },
+  { key: "pipeline", label: "Pipeline", Icon: Target },
+  { key: "calendar", label: "Calendar", Icon: Calendar },
+  { key: "reports", label: "Reports", Icon: PieChart },
+];
+
+const EXPORT_ITEMS = [
+  { key: "clients", label: "Clients", Icon: Building2 },
+  { key: "policies", label: "Policies", Icon: Shield },
+  { key: "renewals", label: "Upcoming Renewals", Icon: Calendar },
+  { key: "prospects", label: "Sales Pipeline", Icon: Target },
+  { key: "activities", label: "Activity Log", Icon: Clock },
+];
+
+const generateId = () => String(Date.now()) + "-" + Math.random().toString(36).substr(2, 9);
+const formatDateShort = (d) => { if (!d) return ""; try { return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric" }); } catch(e) { return ""; } };
+const daysUntil = (d) => { if (!d) return Infinity; const now = new Date(); now.setHours(0,0,0,0); const t = new Date(d); t.setHours(0,0,0,0); return Math.ceil((t - now) / 86400000); };
+const toCSVSafe = (val) => { const str = String(val == null ? "" : val); return str.includes(",") || str.includes('"') || str.includes("\n") ? '"' + str.replace(/"/g, '""') + '"' : str; };
+
+const defaultData = { clients: [], policies: [], activities: [], followUps: [], prospects: [] };
+
+// Email helpers
+const openEmail = (to, subject, body) => { window.location.href = "mailto:" + (to || "") + "?subject=" + encodeURIComponent(subject || "") + "&body=" + encodeURIComponent(body || ""); };
+// Copy to clipboard
+const copyToClipboard = (text) => { try { var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px"; ta.style.top = "-9999px"; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); return true; } catch(e) { return false; } };
+
+// Sub-components defined outside main component for clean hoisting
+const FileIconSvg = ({ size }) => (
+  <svg width={size || 14} height={size || 14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14.5 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V7.5L14.5 2z"/>
+    <polyline points="14,2 14,8 20,8"/>
+  </svg>
+);
+
+const getActivityIcon = (type) => {
+  if (type === "Phone Call" || type === "Cold Call") return <PhoneCall size={14} />;
+  if (type === "Email") return <Send size={14} />;
+  if (type === "In-Person Meeting" || type === "BNI Contact") return <Users size={14} />;
+  if (type === "Quote Sent") return <FileIconSvg size={14} />;
+  return <MessageSquare size={14} />;
+};
+
+const RenewalBadge = ({ days }) => {
+  let bg, color, text;
+  const d = Number(days);
+  if (d < 0) { bg = "#7f1d1d"; color = "#fca5a5"; text = String(Math.abs(d)) + "d overdue"; }
+  else if (d <= 14) { bg = "#7f1d1d"; color = "#fca5a5"; text = String(d) + "d"; }
+  else if (d <= 30) { bg = "#78350f"; color = "#fcd34d"; text = String(d) + "d"; }
+  else if (d <= 60) { bg = "#1e3a5f"; color = "#7dd3fc"; text = String(d) + "d"; }
+  else { bg = "#14532d"; color = "#86efac"; text = String(d) + "d"; }
+  return <span style={{ background: bg, color: color, padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>{text}</span>;
+};
+
+const StageBadge = ({ stage }) => {
+  const c = STAGE_COLORS[stage] || { bg: "#1e293b", fg: "#94a3b8" };
+  return <span style={{ background: c.bg, color: c.fg, padding: "3px 10px", borderRadius: 6, fontSize: 11, fontWeight: 600 }}>{String(stage)}</span>;
+};
+
+const LineTypeBadge = ({ type }) => (
+  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, background: type === "Personal" ? "#1e293b" : "#1e3a5f", color: type === "Personal" ? "#94a3b8" : "#7dd3fc", padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600 }}>
+    {type === "Personal" ? <Car size={10} /> : <Building2 size={10} />} {String(type)}
+  </span>
+);
+
+const BarViz = ({ items, total, maxItems }) => (
+  <div style={{ display: "grid", gap: 10 }}>
+    {(items || []).slice(0, maxItems || 10).map(function(item, i) {
+      const label = String(item[0]);
+      const value = Number(item[1]) || 0;
+      return (
+        <div key={label}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+            <span style={{ fontSize: 13, color: "#cbd5e1", fontWeight: 500 }}>{label}</span>
+            <span style={{ fontSize: 13, color: "#f8fafc", fontWeight: 700 }}>{"$" + value.toLocaleString()}</span>
+          </div>
+          <div style={{ height: 8, borderRadius: 4, background: "#0f1724", overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 4, background: "hsl(" + String(210 + i * 25) + ", 70%, 55%)", width: (total > 0 ? String((value / total * 100)) : "0") + "%", transition: "width 0.4s" }} />
+          </div>
+        </div>
+      );
+    })}
+  </div>
+);
+
+function SentinelCRM() {
+  const [data, setData] = useState(defaultData);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState("dashboard");
+  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [selectedProspectId, setSelectedProspectId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [modal, setModal] = useState(null);
+  const [editItem, setEditItem] = useState(null);
+  const [filterIndustry, setFilterIndustry] = useState("all");
+  const [calendarMonth, setCalendarMonth] = useState(function() { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); });
+  const [pipelineFilter, setPipelineFilter] = useState("all");
+  const [pipelineLineFilter, setPipelineLineFilter] = useState("all");
+  const [reportView, setReportView] = useState("carrier");
+  const [toast, setToast] = useState(null);
+  const [emailMenuFor, setEmailMenuFor] = useState(null);
+  const [emailCompose, setEmailCompose] = useState(null);
+  const [emailCopied, setEmailCopied] = useState("");
+
+  useEffect(function() {
+    (async function() {
+      try {
+        const r = await window.storage.get(STORAGE_KEY);
+        if (r && r.value) {
+          const parsed = JSON.parse(r.value);
+          setData({
+            clients: Array.isArray(parsed.clients) ? parsed.clients : [],
+            policies: Array.isArray(parsed.policies) ? parsed.policies : [],
+            activities: Array.isArray(parsed.activities) ? parsed.activities : [],
+            followUps: Array.isArray(parsed.followUps) ? parsed.followUps : [],
+            prospects: Array.isArray(parsed.prospects) ? parsed.prospects : [],
+          });
+        }
+      } catch(e) { console.error("Load error", e); }
+      setLoading(false);
+    })();
+  }, []);
+
+  const saveData = useCallback(async function(nd) {
+    setData(nd);
+    try { await window.storage.set(STORAGE_KEY, JSON.stringify(nd)); } catch(e) { console.error("Save failed", e); }
+  }, []);
+
+  const showToast = function(msg) { setToast(String(msg)); setTimeout(function() { setToast(null); }, 2500); };
+
+  // CLIENT OPS
+  const addClient = function(c) { const nc = { ...c, id: generateId(), createdAt: new Date().toISOString() }; saveData({ ...data, clients: [...data.clients, nc] }); setModal(null); setSelectedClientId(nc.id); setView("client-detail"); showToast("Client added"); };
+  const updateClient = function(c) { saveData({ ...data, clients: data.clients.map(function(x) { return x.id === c.id ? c : x; }) }); setModal(null); setEditItem(null); showToast("Client updated"); };
+  const deleteClient = function(id) { if (!confirm("Delete this client and all associated data?")) return; saveData({ clients: data.clients.filter(function(c) { return c.id !== id; }), policies: data.policies.filter(function(p) { return p.clientId !== id; }), activities: data.activities.filter(function(a) { return a.clientId !== id; }), followUps: data.followUps.filter(function(f) { return f.clientId !== id; }), prospects: data.prospects }); setSelectedClientId(null); setView("clients"); showToast("Client deleted"); };
+
+  // POLICY OPS
+  const addPolicy = function(p) { saveData({ ...data, policies: [...data.policies, { ...p, id: generateId() }] }); setModal(null); showToast("Policy added"); };
+  const updatePolicy = function(p) { saveData({ ...data, policies: data.policies.map(function(x) { return x.id === p.id ? p : x; }) }); setModal(null); setEditItem(null); showToast("Policy updated"); };
+  const deletePolicy = function(id) { if (!confirm("Delete this policy?")) return; saveData({ ...data, policies: data.policies.filter(function(p) { return p.id !== id; }) }); };
+
+  // ACTIVITY OPS
+  const addActivity = function(a) { saveData({ ...data, activities: [...data.activities, { ...a, id: generateId(), date: a.date || new Date().toISOString() }] }); setModal(null); showToast("Activity logged"); };
+
+  // FOLLOWUP OPS
+  const addFollowUp = function(f) { saveData({ ...data, followUps: [...data.followUps, { ...f, id: generateId(), completed: false }] }); setModal(null); showToast("Follow-up added"); };
+  const toggleFollowUp = function(id) { saveData({ ...data, followUps: data.followUps.map(function(f) { return f.id === id ? { ...f, completed: !f.completed, completedDate: !f.completed ? new Date().toISOString() : null } : f; }) }); };
+  const deleteFollowUp = function(id) { saveData({ ...data, followUps: data.followUps.filter(function(f) { return f.id !== id; }) }); };
+
+  // PROSPECT OPS
+  const addProspect = function(p) { const np = { ...p, id: generateId(), createdAt: new Date().toISOString() }; saveData({ ...data, prospects: [...data.prospects, np] }); setModal(null); showToast("Prospect added"); };
+  const updateProspect = function(p) { saveData({ ...data, prospects: data.prospects.map(function(x) { return x.id === p.id ? p : x; }) }); setModal(null); setEditItem(null); showToast("Prospect updated"); };
+  const deleteProspect = function(id) { if (!confirm("Delete this prospect?")) return; saveData({ ...data, prospects: data.prospects.filter(function(p) { return p.id !== id; }) }); setSelectedProspectId(null); };
+  const convertProspect = function(prospect) {
+    const newClient = { id: generateId(), businessName: prospect.name, contactName: prospect.contactName || prospect.name, phone: prospect.phone || "", email: prospect.email || "", address: prospect.address || "", industry: prospect.industry || "", notes: "Converted from prospect. Source: " + (prospect.source || "N/A") + ". " + (prospect.notes || ""), createdAt: new Date().toISOString() };
+    const updatedProspect = { ...prospect, stage: "Won", convertedClientId: newClient.id, convertedDate: new Date().toISOString() };
+    saveData({ ...data, clients: [...data.clients, newClient], prospects: data.prospects.map(function(p) { return p.id === prospect.id ? updatedProspect : p; }) });
+    setSelectedProspectId(null); setSelectedClientId(newClient.id); setView("client-detail"); showToast("Prospect converted to client!");
+  };
+
+  // DERIVED DATA
+  const selectedClient = data.clients.find(function(c) { return c.id === selectedClientId; });
+  const selectedProspect = data.prospects.find(function(p) { return p.id === selectedProspectId; });
+  const clientPolicies = data.policies.filter(function(p) { return p.clientId === selectedClientId; });
+  const clientActivities = data.activities.filter(function(a) { return a.clientId === selectedClientId; }).sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+  const clientFollowUps = data.followUps.filter(function(f) { return f.clientId === selectedClientId; }).sort(function(a, b) { if (a.completed !== b.completed) return a.completed ? 1 : -1; return new Date(a.dueDate) - new Date(b.dueDate); });
+  const prospectActivities = data.activities.filter(function(a) { return a.prospectId === selectedProspectId; }).sort(function(a, b) { return new Date(b.date) - new Date(a.date); });
+
+  const activePolicies = data.policies.filter(function(p) { return p.status === "active"; });
+  const upcomingRenewals = activePolicies.filter(function(p) { return daysUntil(p.expirationDate) <= 90 && daysUntil(p.expirationDate) >= 0; }).sort(function(a, b) { return daysUntil(a.expirationDate) - daysUntil(b.expirationDate); });
+  const overdueFollowUps = data.followUps.filter(function(f) { return !f.completed && daysUntil(f.dueDate) < 0; });
+  const pendingFollowUps = data.followUps.filter(function(f) { return !f.completed && daysUntil(f.dueDate) >= 0 && daysUntil(f.dueDate) <= 7; });
+  const totalPremium = activePolicies.reduce(function(sum, p) { return sum + (parseFloat(p.premium) || 0); }, 0);
+  const activeProspects = data.prospects.filter(function(p) { return p.stage !== "Won" && p.stage !== "Lost"; });
+
+  const filteredClients = data.clients.filter(function(c) {
+    const ms = !searchTerm || c.businessName.toLowerCase().includes(searchTerm.toLowerCase()) || (c.contactName || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const mi = filterIndustry === "all" || c.industry === filterIndustry;
+    return ms && mi;
+  });
+
+  const filteredProspects = useMemo(function() {
+    let list = data.prospects;
+    if (pipelineFilter !== "all") list = list.filter(function(p) { return p.stage === pipelineFilter; });
+    if (pipelineLineFilter !== "all") list = list.filter(function(p) { return p.lineType === pipelineLineFilter; });
+    if (searchTerm) list = list.filter(function(p) { return p.name.toLowerCase().includes(searchTerm.toLowerCase()) || (p.contactName || "").toLowerCase().includes(searchTerm.toLowerCase()); });
+    return list;
+  }, [data.prospects, pipelineFilter, pipelineLineFilter, searchTerm]);
+
+  const premiumByCarrier = useMemo(function() {
+    const map = {};
+    activePolicies.forEach(function(p) { const k = p.carrier || "Unknown"; map[k] = (map[k] || 0) + (parseFloat(p.premium) || 0); });
+    return Object.entries(map).sort(function(a, b) { return b[1] - a[1]; });
+  }, [data.policies]);
+
+  const premiumByCoverage = useMemo(function() {
+    const map = {};
+    activePolicies.forEach(function(p) { const k = p.coverageType || "Unknown"; map[k] = (map[k] || 0) + (parseFloat(p.premium) || 0); });
+    return Object.entries(map).sort(function(a, b) { return b[1] - a[1]; });
+  }, [data.policies]);
+
+  const premiumByClient = useMemo(function() {
+    const map = {};
+    activePolicies.forEach(function(p) { const c = data.clients.find(function(cl) { return cl.id === p.clientId; }); const k = c ? c.businessName : "Unknown"; map[k] = (map[k] || 0) + (parseFloat(p.premium) || 0); });
+    return Object.entries(map).sort(function(a, b) { return b[1] - a[1]; });
+  }, [data.policies, data.clients]);
+
+  const pipelineStats = useMemo(function() {
+    const stats = {};
+    PIPELINE_STAGES.forEach(function(st) { stats[st] = { count: 0, value: 0 }; });
+    data.prospects.forEach(function(p) { if (stats[p.stage]) { stats[p.stage].count++; stats[p.stage].value += parseFloat(p.estimatedPremium) || 0; }});
+    return stats;
+  }, [data.prospects]);
+
+  // CSV EXPORT
+  const exportCSV = function(type) {
+    let csv = "";
+    if (type === "clients") {
+      csv = "Business Name,Contact,Phone,Email,Address,Industry,Active Policies,Total Premium,Notes\n";
+      data.clients.forEach(function(c) {
+        const pols = data.policies.filter(function(p) { return p.clientId === c.id && p.status === "active"; });
+        const prem = pols.reduce(function(sum, p) { return sum + (parseFloat(p.premium) || 0); }, 0);
+        csv += [c.businessName, c.contactName, c.phone, c.email, c.address, c.industry, pols.length, prem, c.notes].map(toCSVSafe).join(",") + "\n";
+      });
+    } else if (type === "policies") {
+      csv = "Client,Coverage Type,Carrier,Policy Number,Premium,Effective Date,Expiration Date,Status,Notes\n";
+      data.policies.forEach(function(p) {
+        const c = data.clients.find(function(cl) { return cl.id === p.clientId; });
+        csv += [c ? c.businessName : "", p.coverageType, p.carrier, p.policyNumber, p.premium, p.effectiveDate, p.expirationDate, p.status, p.notes].map(toCSVSafe).join(",") + "\n";
+      });
+    } else if (type === "renewals") {
+      csv = "Client,Coverage,Carrier,Policy #,Premium,Expiration,Days Until Renewal\n";
+      upcomingRenewals.forEach(function(p) {
+        const c = data.clients.find(function(cl) { return cl.id === p.clientId; });
+        csv += [c ? c.businessName : "", p.coverageType, p.carrier, p.policyNumber, p.premium, p.expirationDate, daysUntil(p.expirationDate)].map(toCSVSafe).join(",") + "\n";
+      });
+    } else if (type === "prospects") {
+      csv = "Name,Contact,Phone,Email,Line Type,Source,Stage,Est. Premium,Products,Notes\n";
+      data.prospects.forEach(function(p) {
+        csv += [p.name, p.contactName, p.phone, p.email, p.lineType, p.source, p.stage, p.estimatedPremium, (p.products || []).join("; "), p.notes].map(toCSVSafe).join(",") + "\n";
+      });
+    } else if (type === "activities") {
+      csv = "Date,Type,Client/Prospect,Notes\n";
+      var sortedActs = data.activities.slice().sort(function(a,b) { return new Date(b.date) - new Date(a.date); });
+      sortedActs.forEach(function(a) {
+        const c = data.clients.find(function(cl) { return cl.id === a.clientId; });
+        const p = data.prospects.find(function(pr) { return pr.id === a.prospectId; });
+        csv += [a.date, a.type, c ? c.businessName : (p ? p.name : ""), a.notes].map(toCSVSafe).join(",") + "\n";
+      });
+    }
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url; link.download = "sentinel-" + type + "-" + new Date().toISOString().split("T")[0] + ".csv";
+    link.click(); URL.revokeObjectURL(url);
+    showToast(type + " exported");
+  };
+
+  // CALENDAR
+  const calendarRenewals = useMemo(function() {
+    const y = calendarMonth.getFullYear();
+    const m = calendarMonth.getMonth();
+    return activePolicies.filter(function(p) {
+      if (!p.expirationDate) return false;
+      const d = new Date(p.expirationDate);
+      return d.getFullYear() === y && d.getMonth() === m;
+    });
+  }, [data.policies, calendarMonth]);
+
+  const calendarFollowUps = useMemo(function() {
+    const y = calendarMonth.getFullYear();
+    const m = calendarMonth.getMonth();
+    return data.followUps.filter(function(f) {
+      if (!f.dueDate || f.completed) return false;
+      const d = new Date(f.dueDate);
+      return d.getFullYear() === y && d.getMonth() === m;
+    });
+  }, [data.followUps, calendarMonth]);
+
+  if (loading) return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#0f1724", color: "#94a3b8" }}><p>{"Loading Sentinel CRM..."}</p></div>;
+
+  // STYLES
+  const st = {
+    app: { fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: "#0f1724", color: "#e2e8f0", minHeight: "100vh", display: "flex", flexDirection: "column" },
+    header: { background: "#141e30", borderBottom: "1px solid #1e293b", padding: "10px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 },
+    nav: { display: "flex", gap: 2, flexWrap: "wrap" },
+    navBtn: function(active) { return { padding: "7px 14px", borderRadius: 8, border: "none", background: active ? "#1d4ed8" : "transparent", color: active ? "#fff" : "#94a3b8", cursor: "pointer", fontSize: 12, fontWeight: 500, transition: "all 0.15s", whiteSpace: "nowrap" }; },
+    main: { flex: 1, padding: "16px 20px", maxWidth: 1280, width: "100%", margin: "0 auto", boxSizing: "border-box" },
+    card: { background: "#1a2436", borderRadius: 12, border: "1px solid #1e293b", padding: 18, marginBottom: 14 },
+    cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 },
+    cardTitle: { fontSize: 13, fontWeight: 600, color: "#cbd5e1", display: "flex", alignItems: "center", gap: 8 },
+    statGrid: { display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 16 },
+    statBox: function(accent) { return { background: "#1a2436", borderRadius: 12, border: "1px solid #1e293b", padding: "14px 16px", borderLeft: "3px solid " + accent }; },
+    statValue: { fontSize: 24, fontWeight: 700, color: "#f8fafc", marginBottom: 2 },
+    statLabel: { fontSize: 11, color: "#64748b", fontWeight: 500 },
+    btn: function(v) { return { padding: v === "sm" ? "5px 10px" : v === "xs" ? "3px 6px" : "9px 16px", borderRadius: v === "xs" ? 4 : 8, border: v === "outline" ? "1px solid #334155" : "none", background: v === "primary" ? "#1d4ed8" : v === "success" ? "#15803d" : v === "danger" ? "#991b1b" : v === "outline" ? "transparent" : "#1e293b", color: v === "primary" ? "#fff" : v === "success" ? "#bbf7d0" : v === "danger" ? "#fca5a5" : "#cbd5e1", cursor: "pointer", fontSize: v === "xs" ? 11 : v === "sm" ? 12 : 13, fontWeight: 500, display: "inline-flex", alignItems: "center", gap: 5, transition: "all 0.15s", whiteSpace: "nowrap" }; },
+    input: { width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #334155", background: "#0f1724", color: "#e2e8f0", fontSize: 13, outline: "none", boxSizing: "border-box" },
+    select: { width: "100%", padding: "9px 12px", borderRadius: 8, border: "1px solid #334155", background: "#0f1724", color: "#e2e8f0", fontSize: 13, outline: "none", boxSizing: "border-box" },
+    label: { display: "block", fontSize: 11, fontWeight: 600, color: "#94a3b8", marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.03em" },
+    modal: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 20 },
+    modalContent: { background: "#1a2436", borderRadius: 16, border: "1px solid #1e293b", padding: 24, width: "100%", maxWidth: 560, maxHeight: "88vh", overflowY: "auto" },
+    modalTitle: { margin: 0, fontSize: 17, fontWeight: 700, color: "#f8fafc" },
+    th: { textAlign: "left", padding: "8px 10px", fontSize: 10, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid #1e293b" },
+    td: { padding: "10px", fontSize: 13, color: "#cbd5e1", borderBottom: "1px solid rgba(30,41,59,0.08)" },
+    row: { display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: "#0f1724", borderRadius: 8, cursor: "pointer", transition: "background 0.1s" },
+  };
+
+  // MODAL FORMS
+  const ModalWrap = function(props) {
+    return (
+      <div style={st.modal} onClick={function() { setModal(null); setEditItem(null); }}>
+        <div style={st.modalContent} onClick={function(e) { e.stopPropagation(); }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <h3 style={st.modalTitle}>{String(props.title)}</h3>
+            <button onClick={function() { setModal(null); setEditItem(null); }} style={{ ...st.btn(), padding: 5, borderRadius: 6 }}><X size={16} /></button>
+          </div>
+          {props.children}
+        </div>
+      </div>
+    );
+  };
+
+  const FormGrid = function(props) { return <div style={{ display: "grid", gridTemplateColumns: "repeat(" + String(props.cols || 2) + ", 1fr)", gap: 12 }}>{props.children}</div>; };
+  const FormField = function(props) { return <div style={props.span ? { gridColumn: "span " + String(props.span) } : {}}><label style={st.label}>{String(props.label)}</label>{props.children}</div>; };
+  const FormActions = function(props) { return <div style={{ marginTop: 16, display: "flex", gap: 8, justifyContent: "flex-end" }}>{props.children}</div>; };
+
+  const ClientForm = function(props) {
+    const client = props.client;
+    const onSave = props.onSave;
+    const [f, sF] = useState(client || { businessName: "", contactName: "", phone: "", email: "", address: "", industry: "", notes: "" });
+    return (
+      <ModalWrap title={client ? "Edit Client" : "New Commercial Client"}>
+        <div style={{ display: "grid", gap: 12 }}>
+          <FormField label="Business Name *"><input style={st.input} value={f.businessName} onChange={function(e) { sF({ ...f, businessName: e.target.value }); }} placeholder="ABC Pest Control" /></FormField>
+          <FormGrid>
+            <FormField label="Contact Name *"><input style={st.input} value={f.contactName} onChange={function(e) { sF({ ...f, contactName: e.target.value }); }} placeholder="John Smith" /></FormField>
+            <FormField label="Industry"><select style={st.select} value={f.industry} onChange={function(e) { sF({ ...f, industry: e.target.value }); }}><option value="">{"Select..."}</option>{INDUSTRIES.map(function(i) { return <option key={i} value={i}>{i}</option>; })}</select></FormField>
+          </FormGrid>
+          <FormGrid>
+            <FormField label="Phone"><input style={st.input} value={f.phone} onChange={function(e) { sF({ ...f, phone: e.target.value }); }} placeholder="(954) 555-0123" /></FormField>
+            <FormField label="Email"><input style={st.input} value={f.email} onChange={function(e) { sF({ ...f, email: e.target.value }); }} placeholder="john@business.com" /></FormField>
+          </FormGrid>
+          <FormField label="Address"><input style={st.input} value={f.address} onChange={function(e) { sF({ ...f, address: e.target.value }); }} placeholder="123 Main St, Fort Lauderdale, FL" /></FormField>
+          <FormField label="Notes"><textarea style={{ ...st.input, height: 60, resize: "vertical" }} value={f.notes} onChange={function(e) { sF({ ...f, notes: e.target.value }); }} /></FormField>
+          <FormActions><button style={st.btn("primary")} onClick={function() { if (f.businessName && f.contactName) onSave(f); }} disabled={!f.businessName || !f.contactName}><Save size={14} /> {client ? "Update" : "Add Client"}</button></FormActions>
+        </div>
+      </ModalWrap>
+    );
+  };
+
+  const PolicyForm = function(props) {
+    const policy = props.policy;
+    const clientId = props.clientId;
+    const onSave = props.onSave;
+    const [f, sF] = useState(policy || { clientId: clientId, policyNumber: "", carrier: "", coverageType: "", premium: "", effectiveDate: "", expirationDate: "", status: "active", notes: "" });
+    return (
+      <ModalWrap title={policy ? "Edit Policy" : "Add Policy"}>
+        <div style={{ display: "grid", gap: 12 }}>
+          <FormGrid>
+            <FormField label="Coverage Type *">
+              <select style={st.select} value={f.coverageType} onChange={function(e) { sF({ ...f, coverageType: e.target.value }); }}>
+                <option value="">{"Select..."}</option>
+                <optgroup label="Commercial">{COVERAGE_TYPES_COMMERCIAL.map(function(t) { return <option key={t} value={t}>{t}</option>; })}</optgroup>
+                <optgroup label="Personal">{COVERAGE_TYPES_PERSONAL.map(function(t) { return <option key={t} value={t}>{t}</option>; })}</optgroup>
+              </select>
+            </FormField>
+            <FormField label="Carrier *"><select style={st.select} value={f.carrier} onChange={function(e) { sF({ ...f, carrier: e.target.value }); }}><option value="">{"Select..."}</option>{CARRIERS.map(function(c) { return <option key={c} value={c}>{c}</option>; })}</select></FormField>
+          </FormGrid>
+          <FormGrid>
+            <FormField label="Policy Number"><input style={st.input} value={f.policyNumber} onChange={function(e) { sF({ ...f, policyNumber: e.target.value }); }} placeholder="POL-12345" /></FormField>
+            <FormField label="Annual Premium"><input style={st.input} type="number" value={f.premium} onChange={function(e) { sF({ ...f, premium: e.target.value }); }} placeholder="5000" /></FormField>
+          </FormGrid>
+          <FormGrid>
+            <FormField label="Effective Date"><input style={st.input} type="date" value={f.effectiveDate} onChange={function(e) { sF({ ...f, effectiveDate: e.target.value }); }} /></FormField>
+            <FormField label="Expiration Date"><input style={st.input} type="date" value={f.expirationDate} onChange={function(e) { sF({ ...f, expirationDate: e.target.value }); }} /></FormField>
+          </FormGrid>
+          <FormField label="Status">
+            <select style={st.select} value={f.status} onChange={function(e) { sF({ ...f, status: e.target.value }); }}>
+              <option value="active">{"Active"}</option><option value="pending">{"Pending Renewal"}</option><option value="expired">{"Expired"}</option><option value="cancelled">{"Cancelled"}</option>
+            </select>
+          </FormField>
+          <FormField label="Notes"><textarea style={{ ...st.input, height: 50, resize: "vertical" }} value={f.notes} onChange={function(e) { sF({ ...f, notes: e.target.value }); }} /></FormField>
+          <FormActions><button style={st.btn("primary")} onClick={function() { if (f.coverageType && f.carrier) onSave(f); }}><Save size={14} /> {policy ? "Update" : "Add Policy"}</button></FormActions>
+        </div>
+      </ModalWrap>
+    );
+  };
+
+  const ActivityForm = function(props) {
+    const [f, sF] = useState({ clientId: props.clientId, prospectId: props.prospectId, type: "Phone Call", notes: "", date: new Date().toISOString().split("T")[0] });
+    return (
+      <ModalWrap title="Log Activity">
+        <div style={{ display: "grid", gap: 12 }}>
+          <FormGrid>
+            <FormField label="Type"><select style={st.select} value={f.type} onChange={function(e) { sF({ ...f, type: e.target.value }); }}>{ACTIVITY_TYPES.map(function(t) { return <option key={t} value={t}>{t}</option>; })}</select></FormField>
+            <FormField label="Date"><input style={st.input} type="date" value={f.date} onChange={function(e) { sF({ ...f, date: e.target.value }); }} /></FormField>
+          </FormGrid>
+          <FormField label="Notes *"><textarea style={{ ...st.input, height: 80, resize: "vertical" }} value={f.notes} onChange={function(e) { sF({ ...f, notes: e.target.value }); }} placeholder="What happened? Key takeaways, next steps..." /></FormField>
+          <FormActions><button style={st.btn("primary")} onClick={function() { if (f.notes) addActivity(f); }}><Save size={14} /> {"Log Activity"}</button></FormActions>
+        </div>
+      </ModalWrap>
+    );
+  };
+
+  const FollowUpForm = function(props) {
+    const [f, sF] = useState({ clientId: props.clientId, dueDate: "", description: "" });
+    return (
+      <ModalWrap title="New Follow-Up">
+        <div style={{ display: "grid", gap: 12 }}>
+          <FormField label="Due Date *"><input style={st.input} type="date" value={f.dueDate} onChange={function(e) { sF({ ...f, dueDate: e.target.value }); }} /></FormField>
+          <FormField label="Description *"><textarea style={{ ...st.input, height: 80, resize: "vertical" }} value={f.description} onChange={function(e) { sF({ ...f, description: e.target.value }); }} placeholder="Call to review renewal, send updated quote..." /></FormField>
+          <FormActions><button style={st.btn("primary")} onClick={function() { if (f.dueDate && f.description) addFollowUp(f); }}><Save size={14} /> {"Add Follow-Up"}</button></FormActions>
+        </div>
+      </ModalWrap>
+    );
+  };
+
+  const ProspectForm = function(props) {
+    const prospect = props.prospect;
+    const onSave = props.onSave;
+    const [f, sF] = useState(prospect || { name: "", contactName: "", phone: "", email: "", address: "", lineType: "Personal", source: "", stage: "New Lead", industry: "", estimatedPremium: "", products: [], notes: "" });
+    const toggleProduct = function(p) { sF({ ...f, products: (f.products || []).includes(p) ? f.products.filter(function(x) { return x !== p; }) : [...(f.products || []), p] }); };
+    const productOptions = f.lineType === "Personal" ? COVERAGE_TYPES_PERSONAL : COVERAGE_TYPES_COMMERCIAL;
+    return (
+      <ModalWrap title={prospect ? "Edit Prospect" : "New Prospect"}>
+        <div style={{ display: "grid", gap: 12 }}>
+          <FormGrid>
+            <FormField label="Line Type"><select style={st.select} value={f.lineType} onChange={function(e) { sF({ ...f, lineType: e.target.value, products: [] }); }}>{LINE_TYPES.map(function(t) { return <option key={t} value={t}>{t}</option>; })}</select></FormField>
+            <FormField label="Lead Source"><select style={st.select} value={f.source} onChange={function(e) { sF({ ...f, source: e.target.value }); }}><option value="">{"Select..."}</option>{LEAD_SOURCES.map(function(l) { return <option key={l} value={l}>{l}</option>; })}</select></FormField>
+          </FormGrid>
+          <FormGrid>
+            <FormField label={f.lineType === "Personal" ? "Full Name *" : "Business Name *"}><input style={st.input} value={f.name} onChange={function(e) { sF({ ...f, name: e.target.value }); }} placeholder={f.lineType === "Personal" ? "Jane Doe" : "ABC Corp"} /></FormField>
+            {f.lineType === "Commercial" && <FormField label="Contact Person"><input style={st.input} value={f.contactName} onChange={function(e) { sF({ ...f, contactName: e.target.value }); }} /></FormField>}
+            {f.lineType === "Personal" && <FormField label="Stage"><select style={st.select} value={f.stage} onChange={function(e) { sF({ ...f, stage: e.target.value }); }}>{PIPELINE_STAGES.map(function(s2) { return <option key={s2} value={s2}>{s2}</option>; })}</select></FormField>}
+          </FormGrid>
+          <FormGrid>
+            <FormField label="Phone"><input style={st.input} value={f.phone} onChange={function(e) { sF({ ...f, phone: e.target.value }); }} placeholder="(954) 555-0123" /></FormField>
+            <FormField label="Email"><input style={st.input} value={f.email} onChange={function(e) { sF({ ...f, email: e.target.value }); }} /></FormField>
+          </FormGrid>
+          <FormField label="Address"><input style={st.input} value={f.address} onChange={function(e) { sF({ ...f, address: e.target.value }); }} placeholder="Fort Lauderdale, FL" /></FormField>
+          {f.lineType === "Commercial" && (
+            <FormGrid>
+              <FormField label="Industry"><select style={st.select} value={f.industry} onChange={function(e) { sF({ ...f, industry: e.target.value }); }}><option value="">{"Select..."}</option>{INDUSTRIES.map(function(i) { return <option key={i} value={i}>{i}</option>; })}</select></FormField>
+              <FormField label="Stage"><select style={st.select} value={f.stage} onChange={function(e) { sF({ ...f, stage: e.target.value }); }}>{PIPELINE_STAGES.map(function(s2) { return <option key={s2} value={s2}>{s2}</option>; })}</select></FormField>
+            </FormGrid>
+          )}
+          <FormField label="Estimated Annual Premium"><input style={st.input} type="number" value={f.estimatedPremium} onChange={function(e) { sF({ ...f, estimatedPremium: e.target.value }); }} placeholder="2500" /></FormField>
+          <FormField label="Products Interested In">
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+              {productOptions.map(function(p) {
+                const selected = (f.products || []).includes(p);
+                return <button key={p} onClick={function() { toggleProduct(p); }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid", borderColor: selected ? "#3b82f6" : "#334155", background: selected ? "rgba(29,78,216,0.12)" : "transparent", color: selected ? "#93c5fd" : "#94a3b8", fontSize: 12, cursor: "pointer" }}>{p}</button>;
+              })}
+            </div>
+          </FormField>
+          <FormField label="Notes"><textarea style={{ ...st.input, height: 60, resize: "vertical" }} value={f.notes} onChange={function(e) { sF({ ...f, notes: e.target.value }); }} placeholder="How did they find us? What are their needs?" /></FormField>
+          <FormActions><button style={st.btn("primary")} onClick={function() { if (f.name) onSave(f); }} disabled={!f.name}><Save size={14} /> {prospect ? "Update" : "Add Prospect"}</button></FormActions>
+        </div>
+      </ModalWrap>
+    );
+  };
+
+  const ExportModal = function() {
+    return (
+      <ModalWrap title="Export Data">
+        <div style={{ display: "grid", gap: 10 }}>
+          {EXPORT_ITEMS.map(function(item) {
+            var desc = "";
+            if (item.key === "clients") desc = String(data.clients.length) + " clients";
+            else if (item.key === "policies") desc = String(data.policies.length) + " policies";
+            else if (item.key === "renewals") desc = String(upcomingRenewals.length) + " within 90 days";
+            else if (item.key === "prospects") desc = String(data.prospects.length) + " prospects";
+            else if (item.key === "activities") desc = String(data.activities.length) + " activities";
+            var IconComp = item.Icon;
+            return (
+              <button key={item.key} onClick={function() { exportCSV(item.key); }} style={{ ...st.row, cursor: "pointer", justifyContent: "space-between", border: "1px solid #1e293b" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ color: "#3b82f6" }}><IconComp size={16} /></span>
+                  <div><div style={{ fontSize: 14, fontWeight: 600, color: "#e2e8f0" }}>{String(item.label)}</div><div style={{ fontSize: 11, color: "#64748b" }}>{desc}</div></div>
+                </div>
+                <Download size={16} color="#64748b" />
+              </button>
+            );
+          })}
+        </div>
+      </ModalWrap>
+    );
+  };
+
+  // EMAIL MENU
+  const EmailMenu = function(props) {
+    const entity = props.entity;
+    const entityType = props.entityType;
+    const position = props.position || {};
+    if (!entity || !entity.email) return null;
+    const name = entity.contactName || entity.businessName || entity.name || "";
+    const email = entity.email;
+    
+    var templates = [];
+    if (entityType === "client") {
+      templates = [
+        { label: "Policy Review", desc: "Schedule annual review", subject: "Policy Review - Sentinel Insurance", body: "Hi " + name + ",\n\nI'd like to schedule a review of your current coverage to make sure everything is up to date.\n\nWould you have time this week for a quick call?\n\nBest,\nAlec Berizzi\nSentinel Insurance" },
+        { label: "Renewal Notice", desc: "Upcoming renewal reminder", subject: "Upcoming Renewal - Sentinel Insurance", body: "Hi " + name + ",\n\nThis is a friendly reminder that your policy is coming up for renewal soon. I'd like to review your coverage and discuss any updates.\n\nPlease let me know a good time to connect.\n\nBest,\nAlec Berizzi\nSentinel Insurance" },
+        { label: "Thank You", desc: "Post-meeting follow up", subject: "Thank You - Sentinel Insurance", body: "Hi " + name + ",\n\nThank you for taking the time to meet with me. I appreciate your business and am here if you have any questions.\n\nBest,\nAlec Berizzi\nSentinel Insurance" },
+        { label: "Custom Email", desc: "Blank email to " + name, subject: "", body: "" },
+      ];
+    } else {
+      templates = [
+        { label: "Introduction", desc: "Initial outreach", subject: "Insurance Quote - Sentinel Insurance", body: "Hi " + name + ",\n\nMy name is Alec Berizzi with Sentinel Insurance. I specialize in helping businesses like yours find the right coverage at competitive rates.\n\nI'd love to learn more about your insurance needs. Would you have 15 minutes for a quick call?\n\nBest,\nAlec Berizzi\nSentinel Insurance" },
+        { label: "Quote Follow-Up", desc: "Follow up on sent quote", subject: "Following Up - Sentinel Insurance", body: "Hi " + name + ",\n\nI wanted to follow up on the quote I sent over. Have you had a chance to review it? I'm happy to walk through the details or answer any questions.\n\nBest,\nAlec Berizzi\nSentinel Insurance" },
+        { label: "Custom Email", desc: "Blank email to " + name, subject: "", body: "" },
+      ];
+    }
+
+    return (
+      <div style={{ position: "absolute", right: position.right || 0, top: position.top || "100%", marginTop: position.marginTop || 4, background: "#1a2436", border: "1px solid #334155", borderRadius: 10, padding: 6, minWidth: 220, zIndex: 60, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
+        <div style={{ padding: "6px 10px", fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{"Email Templates"}</div>
+        {templates.map(function(tpl) {
+          return (
+            <button key={tpl.label} onClick={function(e) {
+              e.stopPropagation();
+              openEmail(email, tpl.subject, tpl.body); setEmailCompose({ to: email, subject: tpl.subject, body: tpl.body, label: tpl.label, entityType: entityType, entity: entity, name: name });
+              addActivity({ clientId: entityType === "client" ? entity.id : undefined, prospectId: entityType === "prospect" ? entity.id : undefined, type: "Email", notes: "Email: " + tpl.label + " to " + name, date: new Date().toISOString().split("T")[0] });
+              setEmailMenuFor(null);
+            }} style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 10px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", color: "#e2e8f0" }}>
+              <div style={{ fontSize: 13, fontWeight: 500 }}>{tpl.label}</div>
+              <div style={{ fontSize: 11, color: "#64748b" }}>{tpl.desc}</div>
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Email Compose Modal
+  const EmailComposeModal = function() {
+    if (!emailCompose) return null;
+    var ec = emailCompose;
+    var copyField = function(field, value) {
+      copyToClipboard(value);
+      setEmailCopied(field);
+      setTimeout(function() { setEmailCopied(""); }, 2000);
+    };
+    var copyAll = function() {
+      var full = "To: " + ec.to + "\nSubject: " + ec.subject + "\n\n" + ec.body;
+      copyToClipboard(full);
+      setEmailCopied("all");
+      setTimeout(function() { setEmailCopied(""); }, 2000);
+    };
+    var cpBtn = function(field, value) {
+      return React.createElement("button", { onClick: function() { copyField(field, value); }, style: { padding: "4px 10px", background: emailCopied === field ? "#22c55e" : "#3b82f6", color: "#fff", border: "none", borderRadius: 6, fontSize: 11, cursor: "pointer", fontWeight: 600, minWidth: 60 } }, emailCopied === field ? "Copied!" : "Copy");
+    };
+    return (
+      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={function() { setEmailCompose(null); setEmailCopied(""); }}>
+        <div style={{ background: "#1e293b", borderRadius: 14, padding: 24, width: "90%", maxWidth: 520, maxHeight: "80vh", overflow: "auto", border: "1px solid #334155" }} onClick={function(e) { e.stopPropagation(); }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h3 style={{ margin: 0, color: "#f1f5f9", fontSize: 16 }}>{"📧 Email Compose"}</h3>
+            <button onClick={function() { setEmailCompose(null); setEmailCopied(""); }} style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" }}>{"×"}</button>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <label style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{"TO"}</label>
+              {cpBtn("to", ec.to)}
+            </div>
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: "8px 12px", color: "#e2e8f0", fontSize: 13, border: "1px solid #334155" }}>{ec.to}</div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <label style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{"SUBJECT"}</label>
+              {cpBtn("subject", ec.subject)}
+            </div>
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: "8px 12px", color: "#e2e8f0", fontSize: 13, border: "1px solid #334155" }}>{ec.subject || "(no subject)"}</div>
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+              <label style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{"BODY"}</label>
+              {cpBtn("body", ec.body)}
+            </div>
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 13, border: "1px solid #334155", whiteSpace: "pre-wrap", maxHeight: 250, overflow: "auto", lineHeight: 1.5 }}>{ec.body || "(empty)"}</div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={copyAll} style={{ flex: 1, padding: "10px 16px", background: emailCopied === "all" ? "#22c55e" : "#3b82f6", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{emailCopied === "all" ? "✓ All Copied!" : "Copy Entire Email"}</button>
+            <button onClick={function() { setEmailCompose(null); setEmailCopied(""); }} style={{ padding: "10px 16px", background: "#334155", color: "#e2e8f0", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>{"Close"}</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // === VIEWS ===
+
+  const Dashboard = function() {
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{"Dashboard"}</h2><p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>{"Sentinel Insurance \u2014 Commercial & Sales Overview"}</p></div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button style={st.btn("outline")} onClick={function() { setModal("export"); }}><Download size={14} /> {"Export"}</button>
+            <button style={st.btn("primary")} onClick={function() { setModal("add-client"); }}><Plus size={14} /> {"Client"}</button>
+            <button style={{ ...st.btn("primary"), background: "#15803d" }} onClick={function() { setModal("add-prospect"); }}><UserPlus size={14} /> {"Prospect"}</button>
+          </div>
+        </div>
+        <div style={st.statGrid}>
+          <div style={st.statBox("#3b82f6")}><div style={st.statValue}>{String(data.clients.length)}</div><div style={st.statLabel}>{"Clients"}</div></div>
+          <div style={st.statBox("#10b981")}><div style={st.statValue}>{String(activePolicies.length)}</div><div style={st.statLabel}>{"Active Policies"}</div></div>
+          <div style={st.statBox("#f59e0b")}><div style={st.statValue}>{"$" + totalPremium.toLocaleString()}</div><div style={st.statLabel}>{"Book Premium"}</div></div>
+          <div style={st.statBox("#8b5cf6")}><div style={st.statValue}>{String(activeProspects.length)}</div><div style={st.statLabel}>{"Active Prospects"}</div></div>
+          <div style={st.statBox(overdueFollowUps.length > 0 ? "#ef4444" : "#64748b")}><div style={{ ...st.statValue, color: overdueFollowUps.length > 0 ? "#fca5a5" : "#f8fafc" }}>{String(overdueFollowUps.length)}</div><div style={st.statLabel}>{"Overdue Tasks"}</div></div>
+        </div>
+
+        {data.prospects.length > 0 && (
+          <div style={{ ...st.card, padding: 14 }}>
+            <div style={{ ...st.cardTitle, marginBottom: 10 }}><Target size={16} color="#10b981" /> {"Pipeline Summary"}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {PIPELINE_STAGES.filter(function(s2) { return s2 !== "Won" && s2 !== "Lost"; }).map(function(s2) {
+                var sc = STAGE_COLORS[s2] || {};
+                return (
+                  <div key={s2} style={{ flex: 1, minWidth: 120, background: "#0f1724", borderRadius: 8, padding: "10px 12px", textAlign: "center" }}>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: sc.fg || "#94a3b8" }}>{String(pipelineStats[s2] ? pipelineStats[s2].count : 0)}</div>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>{s2}</div>
+                    {pipelineStats[s2] && pipelineStats[s2].value > 0 && <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>{"$" + pipelineStats[s2].value.toLocaleString()}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={st.card}>
+            <div style={st.cardHeader}><div style={st.cardTitle}><Calendar size={16} color="#f59e0b" /> {"Upcoming Renewals"}</div></div>
+            {upcomingRenewals.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 12 }}>{"No upcoming renewals"}</p> : (
+              <div style={{ display: "grid", gap: 6 }}>
+                {upcomingRenewals.slice(0, 8).map(function(p) {
+                  var c = data.clients.find(function(cl) { return cl.id === p.clientId; });
+                  return (
+                    <div key={p.id} style={st.row} onClick={function() { setSelectedClientId(p.clientId); setView("client-detail"); }}>
+                      <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{c ? c.businessName : "Unknown"}</div><div style={{ fontSize: 11, color: "#64748b" }}>{String(p.coverageType) + " \xb7 " + String(p.carrier)}</div></div>
+                      <span style={{ fontSize: 11, color: "#94a3b8", marginRight: 6 }}>{formatDateShort(p.expirationDate)}</span>
+                      <RenewalBadge days={daysUntil(p.expirationDate)} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div style={st.card}>
+            <div style={st.cardHeader}><div style={st.cardTitle}><Bell size={16} color="#8b5cf6" /> {"Action Items"}</div></div>
+            {overdueFollowUps.length === 0 && pendingFollowUps.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 12 }}>{"All caught up!"}</p> : (
+              <div style={{ display: "grid", gap: 6 }}>
+                {[...overdueFollowUps, ...pendingFollowUps].slice(0, 8).map(function(f) {
+                  var c = data.clients.find(function(cl) { return cl.id === f.clientId; });
+                  return (
+                    <div key={f.id} style={{ ...st.row, cursor: "default" }}>
+                      <button onClick={function() { toggleFollowUp(f.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 0 }}><CheckCircle size={15} /></button>
+                      <div style={{ flex: 1 }}><div style={{ fontSize: 13, color: "#e2e8f0" }}>{String(f.description)}</div><div style={{ fontSize: 11, color: "#64748b" }}>{(c ? c.businessName : "") + " \xb7 " + formatDateShort(f.dueDate)}</div></div>
+                      <RenewalBadge days={daysUntil(f.dueDate)} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div style={st.card}>
+          <div style={st.cardHeader}><div style={st.cardTitle}><Clock size={16} color="#3b82f6" /> {"Recent Activity"}</div></div>
+          {data.activities.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 12 }}>{"No activity yet"}</p> : (
+            <div style={{ display: "grid", gap: 4 }}>
+              {data.activities.slice().sort(function(a, b) { return new Date(b.date) - new Date(a.date); }).slice(0, 10).map(function(a) {
+                var c = data.clients.find(function(cl) { return cl.id === a.clientId; });
+                var p = data.prospects.find(function(pr) { return pr.id === a.prospectId; });
+                var entityName = c ? c.businessName : (p ? p.name : "");
+                var noteText = String(a.notes || "");
+                return (
+                  <div key={a.id} style={st.row} onClick={function() { if (a.clientId) { setSelectedClientId(a.clientId); setView("client-detail"); } else if (a.prospectId) { setSelectedProspectId(a.prospectId); setView("prospect-detail"); }}}>
+                    <div style={{ color: "#64748b" }}>{getActivityIcon(a.type)}</div>
+                    <div style={{ flex: 1 }}><span style={{ fontSize: 13, color: "#cbd5e1" }}><strong style={{ color: "#e2e8f0" }}>{entityName}</strong>{" \u2014 " + (noteText.length > 80 ? noteText.substring(0, 80) + "..." : noteText)}</span></div>
+                    <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>{formatDateShort(a.date)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const ClientsList = function() {
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{"Commercial Clients"}</h2>
+          <div style={{ display: "flex", gap: 8 }}><button style={st.btn("outline")} onClick={function() { exportCSV("clients"); }}><Download size={14} /></button><button style={st.btn("primary")} onClick={function() { setModal("add-client"); }}><Plus size={14} /> {"New Client"}</button></div>
+        </div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+          <div style={{ flex: 1, position: "relative" }}><Search size={15} style={{ position: "absolute", left: 11, top: 11, color: "#475569" }} /><input style={{ ...st.input, paddingLeft: 34 }} placeholder="Search clients..." value={searchTerm} onChange={function(e) { setSearchTerm(e.target.value); }} /></div>
+          <select style={{ ...st.select, width: 180 }} value={filterIndustry} onChange={function(e) { setFilterIndustry(e.target.value); }}><option value="all">{"All Industries"}</option>{INDUSTRIES.map(function(i) { return <option key={i} value={i}>{i}</option>; })}</select>
+        </div>
+        {filteredClients.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#475569" }}><Building2 size={36} style={{ marginBottom: 10, opacity: 0.3 }} /><p style={{ fontSize: 14, fontWeight: 500 }}>{data.clients.length === 0 ? "No clients yet" : "No matches"}</p></div>
+        ) : (
+          <div style={{ display: "grid", gap: 6 }}>
+            {filteredClients.map(function(client) {
+              var pols = data.policies.filter(function(p) { return p.clientId === client.id && p.status === "active"; });
+              var prem = pols.reduce(function(sum, p) { return sum + (parseFloat(p.premium) || 0); }, 0);
+              var pfu = data.followUps.filter(function(f) { return f.clientId === client.id && !f.completed; });
+              var nr = pols.filter(function(p) { return daysUntil(p.expirationDate) >= 0; }).sort(function(a, b) { return daysUntil(a.expirationDate) - daysUntil(b.expirationDate); })[0];
+              return (
+                <div key={client.id} style={{ ...st.card, marginBottom: 0, cursor: "pointer", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                  onClick={function() { setSelectedClientId(client.id); setView("client-detail"); }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: "rgba(29,78,216,0.08)", display: "flex", alignItems: "center", justifyContent: "center" }}><Building2 size={17} color="#3b82f6" /></div>
+                    <div><div style={{ fontSize: 14, fontWeight: 600, color: "#f8fafc" }}>{String(client.businessName)}</div><div style={{ fontSize: 12, color: "#64748b" }}>{String(client.contactName || "")}{client.industry ? " \xb7 " + client.industry : ""}</div></div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <div style={{ textAlign: "right" }}><div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{String(pols.length) + " pol" + (pols.length !== 1 ? "s" : "")}</div><div style={{ fontSize: 11, color: "#64748b" }}>{"$" + prem.toLocaleString() + "/yr"}</div></div>
+                    {pfu.length > 0 && <span style={{ background: "#7f1d1d", color: "#fca5a5", padding: "2px 7px", borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{String(pfu.length)}</span>}
+                    {nr && <RenewalBadge days={daysUntil(nr.expirationDate)} />}
+                    <ChevronRight size={15} color="#475569" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ClientDetail = function() {
+    if (!selectedClient) return null;
+    var cp = clientPolicies;
+    var totalClientPrem = cp.filter(function(p) { return p.status === "active"; }).reduce(function(sum, p) { return sum + (parseFloat(p.premium) || 0); }, 0);
+    return (
+      <div>
+        <button onClick={function() { setView("clients"); setSelectedClientId(null); }} style={{ ...st.btn("outline"), marginBottom: 12, padding: "5px 12px" }}><ArrowLeft size={14} /> {"Back"}</button>
+        <div style={{ ...st.card, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{String(selectedClient.businessName)}</h2>
+              {selectedClient.industry && <span style={{ fontSize: 12, color: "#3b82f6", background: "rgba(29,78,216,0.08)", padding: "2px 10px", borderRadius: 6 }}>{String(selectedClient.industry)}</span>}
+            </div>
+            <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap", fontSize: 13, color: "#94a3b8" }}>
+              {selectedClient.contactName && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><User size={13} /> {String(selectedClient.contactName)}</span>}
+              {selectedClient.phone && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={13} /> {String(selectedClient.phone)}</span>}
+              {selectedClient.email && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={13} /> {String(selectedClient.email)}</span>}
+              {selectedClient.address && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={13} /> {String(selectedClient.address)}</span>}
+            </div>
+            {selectedClient.notes && <p style={{ marginTop: 8, fontSize: 13, color: "#64748b", lineHeight: 1.5 }}>{String(selectedClient.notes)}</p>}
+            <div style={{ marginTop: 10, fontSize: 13, fontWeight: 600, color: "#10b981" }}>{"Total Book: $" + totalClientPrem.toLocaleString() + "/yr"}</div>
+          </div>
+          <div style={{ display: "flex", gap: 6, position: "relative" }}>
+            {selectedClient.email && (
+              <div style={{ position: "relative" }}>
+                <button style={st.btn("primary")} onClick={function() { setEmailMenuFor(emailMenuFor === "client" ? null : "client"); }}><Mail size={14} /> {"Email"}</button>
+                {emailMenuFor === "client" && <EmailMenu entity={selectedClient} entityType="client" position={{ right: 0, marginTop: 4 }} />}
+              </div>
+            )}
+            <button style={st.btn("outline")} onClick={function() { setEditItem(selectedClient); setModal("edit-client"); }}><Edit2 size={14} /></button>
+            <button style={{ ...st.btn("outline"), borderColor: "#7f1d1d" }} onClick={function() { deleteClient(selectedClient.id); }}><Trash2 size={14} color="#f87171" /></button>
+          </div>
+        </div>
+
+        <div style={st.card}>
+          <div style={st.cardHeader}><div style={st.cardTitle}><Shield size={16} color="#3b82f6" /> {"Policies (" + String(cp.length) + ")"}</div><button style={st.btn("primary")} onClick={function() { setModal("add-policy"); }}><Plus size={14} /> {"Add"}</button></div>
+          {cp.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 14 }}>{"No policies yet"}</p> : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr><th style={st.th}>{"Coverage"}</th><th style={st.th}>{"Carrier"}</th><th style={st.th}>{"Policy #"}</th><th style={st.th}>{"Premium"}</th><th style={st.th}>{"Eff."}</th><th style={st.th}>{"Exp."}</th><th style={st.th}>{"Status"}</th><th style={st.th}>{""}</th></tr></thead>
+                <tbody>
+                  {cp.map(function(p) {
+                    var statusBg = p.status === "active" ? "#14532d" : p.status === "pending" ? "#78350f" : "#1e293b";
+                    var statusColor = p.status === "active" ? "#86efac" : p.status === "pending" ? "#fcd34d" : "#94a3b8";
+                    return (
+                      <tr key={p.id}>
+                        <td style={{ ...st.td, fontWeight: 600 }}>{String(p.coverageType)}</td>
+                        <td style={st.td}>{String(p.carrier)}</td>
+                        <td style={{ ...st.td, fontFamily: "monospace", fontSize: 12 }}>{p.policyNumber || "\u2014"}</td>
+                        <td style={st.td}>{"$" + parseFloat(p.premium || 0).toLocaleString()}</td>
+                        <td style={st.td}>{formatDateShort(p.effectiveDate)}</td>
+                        <td style={st.td}><span style={{ display: "flex", alignItems: "center", gap: 6 }}>{formatDateShort(p.expirationDate)} {p.status === "active" && p.expirationDate && <RenewalBadge days={daysUntil(p.expirationDate)} />}</span></td>
+                        <td style={st.td}><span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: statusBg, color: statusColor }}>{String(p.status)}</span></td>
+                        <td style={{ ...st.td, whiteSpace: "nowrap" }}><button onClick={function() { setEditItem(p); setModal("edit-policy"); }} style={st.btn("xs")}><Edit2 size={11} /></button>{" "}<button onClick={function() { deletePolicy(p.id); }} style={st.btn("xs")}><Trash2 size={11} color="#f87171" /></button></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={st.card}>
+            <div style={st.cardHeader}><div style={st.cardTitle}><Bell size={16} color="#f59e0b" /> {"Follow-Ups (" + String(clientFollowUps.filter(function(f) { return !f.completed; }).length) + ")"}</div><button style={st.btn("primary")} onClick={function() { setModal("add-followup"); }}><Plus size={14} /></button></div>
+            {clientFollowUps.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 14 }}>{"No follow-ups"}</p> : (
+              <div style={{ display: "grid", gap: 5 }}>
+                {clientFollowUps.map(function(f) {
+                  return (
+                    <div key={f.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px", background: "#0f1724", borderRadius: 8, opacity: f.completed ? 0.4 : 1 }}>
+                      <button onClick={function() { toggleFollowUp(f.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: f.completed ? "#10b981" : "#475569", padding: 0, marginTop: 2 }}><CheckCircle size={15} /></button>
+                      <div style={{ flex: 1 }}><div style={{ fontSize: 13, color: "#e2e8f0", textDecoration: f.completed ? "line-through" : "none" }}>{String(f.description)}</div><div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>{formatDateShort(f.dueDate)} {!f.completed && <RenewalBadge days={daysUntil(f.dueDate)} />}</div></div>
+                      <button onClick={function() { deleteFollowUp(f.id); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#475569", padding: 0 }}><X size={13} /></button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div style={st.card}>
+            <div style={st.cardHeader}><div style={st.cardTitle}><Clock size={16} color="#8b5cf6" /> {"Activity (" + String(clientActivities.length) + ")"}</div><button style={st.btn("primary")} onClick={function() { setModal("add-activity-client"); }}><Plus size={14} /></button></div>
+            {clientActivities.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 14 }}>{"No activity"}</p> : (
+              <div style={{ display: "grid", gap: 5 }}>
+                {clientActivities.slice(0, 15).map(function(a) {
+                  return (
+                    <div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px", background: "#0f1724", borderRadius: 8 }}>
+                      <div style={{ color: "#64748b", marginTop: 2 }}>{getActivityIcon(a.type)}</div>
+                      <div style={{ flex: 1 }}><div style={{ fontSize: 13, color: "#e2e8f0" }}>{String(a.notes)}</div><div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>{String(a.type) + " \xb7 " + formatDateShort(a.date)}</div></div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // PIPELINE
+  const PipelineView = function() {
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{"Sales Pipeline"}</h2><p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>{"Track prospects from lead to close"}</p></div>
+          <div style={{ display: "flex", gap: 8 }}><button style={st.btn("outline")} onClick={function() { exportCSV("prospects"); }}><Download size={14} /></button><button style={{ ...st.btn("primary"), background: "#15803d" }} onClick={function() { setModal("add-prospect"); }}><UserPlus size={14} /> {"New Prospect"}</button></div>
+        </div>
+
+        <div style={{ ...st.card, padding: 14 }}>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {PIPELINE_STAGES.map(function(s2) {
+              var sc = STAGE_COLORS[s2] || {};
+              var active = pipelineFilter === s2;
+              return (
+                <button key={s2} onClick={function() { setPipelineFilter(pipelineFilter === s2 ? "all" : s2); }} style={{ flex: 1, minWidth: 100, background: active ? sc.bg : "#0f1724", borderRadius: 8, padding: "10px 8px", textAlign: "center", border: active ? "1px solid " + (sc.fg || "#fff") + "40" : "1px solid transparent", cursor: "pointer", transition: "all 0.15s" }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: sc.fg || "#94a3b8" }}>{String(pipelineStats[s2] ? pipelineStats[s2].count : 0)}</div>
+                  <div style={{ fontSize: 10, color: "#64748b" }}>{s2}</div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
+          <div style={{ flex: 1, position: "relative" }}><Search size={15} style={{ position: "absolute", left: 11, top: 11, color: "#475569" }} /><input style={{ ...st.input, paddingLeft: 34 }} placeholder="Search prospects..." value={searchTerm} onChange={function(e) { setSearchTerm(e.target.value); }} /></div>
+          <select style={{ ...st.select, width: 160 }} value={pipelineLineFilter} onChange={function(e) { setPipelineLineFilter(e.target.value); }}><option value="all">{"All Lines"}</option><option value="Personal">{"Personal"}</option><option value="Commercial">{"Commercial"}</option></select>
+        </div>
+
+        {filteredProspects.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#475569" }}><Target size={36} style={{ marginBottom: 10, opacity: 0.3 }} /><p style={{ fontSize: 14, fontWeight: 500 }}>{"No prospects" + (pipelineFilter !== "all" ? ' in "' + pipelineFilter + '"' : "")}</p></div>
+        ) : (
+          <div style={{ display: "grid", gap: 6 }}>
+            {filteredProspects.map(function(p) {
+              return (
+                <div key={p.id} style={{ ...st.card, marginBottom: 0, cursor: "pointer", padding: "14px 18px", display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                  onClick={function() { setSelectedProspectId(p.id); setView("prospect-detail"); }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <div style={{ width: 38, height: 38, borderRadius: 10, background: p.lineType === "Personal" ? "#1e293b" : "rgba(30,58,95,0.12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      {p.lineType === "Personal" ? <User size={17} color="#94a3b8" /> : <Building2 size={17} color="#7dd3fc" />}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: "#f8fafc" }}>{String(p.name)}</div>
+                      <div style={{ fontSize: 12, color: "#64748b", display: "flex", gap: 8, alignItems: "center", marginTop: 2 }}>
+                        <LineTypeBadge type={p.lineType} />
+                        {p.source && <span>{String(p.source)}</span>}
+                        {p.products && p.products.length > 0 && <span>{"\xb7 " + p.products.join(", ")}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                    {p.estimatedPremium && <span style={{ fontSize: 14, fontWeight: 600, color: "#10b981" }}>{"$" + parseFloat(p.estimatedPremium).toLocaleString()}</span>}
+                    <StageBadge stage={p.stage} />
+                    <ChevronRight size={15} color="#475569" />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const ProspectDetail = function() {
+    if (!selectedProspect) return null;
+    var sp = selectedProspect;
+    return (
+      <div>
+        <button onClick={function() { setView("pipeline"); setSelectedProspectId(null); }} style={{ ...st.btn("outline"), marginBottom: 12, padding: "5px 12px" }}><ArrowLeft size={14} /> {"Back"}</button>
+        <div style={{ ...st.card, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{String(sp.name)}</h2>
+              <LineTypeBadge type={sp.lineType} />
+              <StageBadge stage={sp.stage} />
+            </div>
+            <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap", fontSize: 13, color: "#94a3b8" }}>
+              {sp.contactName && <span><User size={13} style={{ verticalAlign: "middle" }} /> {String(sp.contactName)}</span>}
+              {sp.phone && <span><Phone size={13} style={{ verticalAlign: "middle" }} /> {String(sp.phone)}</span>}
+              {sp.email && <span><Mail size={13} style={{ verticalAlign: "middle" }} /> {String(sp.email)}</span>}
+              {sp.address && <span><MapPin size={13} style={{ verticalAlign: "middle" }} /> {String(sp.address)}</span>}
+              {sp.source && <span><Zap size={13} style={{ verticalAlign: "middle" }} /> {String(sp.source)}</span>}
+            </div>
+            {sp.products && sp.products.length > 0 && <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" }}>{sp.products.map(function(p) { return <span key={p} style={{ background: "rgba(29,78,216,0.08)", color: "#93c5fd", padding: "3px 10px", borderRadius: 6, fontSize: 12 }}>{String(p)}</span>; })}</div>}
+            {sp.notes && <p style={{ marginTop: 8, fontSize: 13, color: "#64748b" }}>{String(sp.notes)}</p>}
+            {sp.estimatedPremium && <div style={{ marginTop: 8, fontSize: 14, fontWeight: 600, color: "#10b981" }}>{"Est. Premium: $" + parseFloat(sp.estimatedPremium).toLocaleString() + "/yr"}</div>}
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {sp.stage !== "Won" && sp.stage !== "Lost" && <button style={st.btn("success")} onClick={function() { convertProspect(sp); }}><CheckCircle size={14} /> {"Convert to Client"}</button>}
+            {sp.email && (
+              <div style={{ position: "relative" }}>
+                <button style={st.btn("primary")} onClick={function() { setEmailMenuFor(emailMenuFor === "prospect" ? null : "prospect"); }}><Mail size={14} /> {"Email"}</button>
+                {emailMenuFor === "prospect" && <EmailMenu entity={sp} entityType="prospect" position={{ right: 0, marginTop: 4 }} />}
+              </div>
+            )}
+            <button style={st.btn("outline")} onClick={function() { setEditItem(sp); setModal("edit-prospect"); }}><Edit2 size={14} /></button>
+            <button style={{ ...st.btn("outline"), borderColor: "#7f1d1d" }} onClick={function() { deleteProspect(sp.id); setView("pipeline"); }}><Trash2 size={14} color="#f87171" /></button>
+          </div>
+        </div>
+
+        {sp.stage !== "Won" && sp.stage !== "Lost" && (
+          <div style={{ ...st.card, padding: 14 }}>
+            <div style={{ ...st.cardTitle, marginBottom: 10 }}>{"Move Stage"}</div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {PIPELINE_STAGES.map(function(s2) {
+                var sc = STAGE_COLORS[s2] || {};
+                return <button key={s2} onClick={function() { updateProspect({ ...sp, stage: s2 }); }} style={{ padding: "6px 14px", borderRadius: 8, border: sp.stage === s2 ? "2px solid " + (sc.fg || "#fff") : "1px solid #334155", background: sp.stage === s2 ? sc.bg : "transparent", color: sp.stage === s2 ? sc.fg : "#94a3b8", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>{s2}</button>;
+              })}
+            </div>
+          </div>
+        )}
+
+        <div style={st.card}>
+          <div style={st.cardHeader}><div style={st.cardTitle}><Clock size={16} color="#8b5cf6" /> {"Activity (" + String(prospectActivities.length) + ")"}</div><button style={st.btn("primary")} onClick={function() { setModal("add-activity-prospect"); }}><Plus size={14} /> {"Log"}</button></div>
+          {prospectActivities.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 14 }}>{"No activity yet \u2014 log your first touchpoint"}</p> : (
+            <div style={{ display: "grid", gap: 5 }}>
+              {prospectActivities.slice(0, 20).map(function(a) {
+                return (
+                  <div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "8px 10px", background: "#0f1724", borderRadius: 8 }}>
+                    <div style={{ color: "#64748b", marginTop: 2 }}>{getActivityIcon(a.type)}</div>
+                    <div style={{ flex: 1 }}><div style={{ fontSize: 13, color: "#e2e8f0" }}>{String(a.notes)}</div><div style={{ fontSize: 11, color: "#64748b", marginTop: 1 }}>{String(a.type) + " \xb7 " + formatDateShort(a.date)}</div></div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // CALENDAR
+  const CalendarView = function() {
+    var y = calendarMonth.getFullYear();
+    var m = calendarMonth.getMonth();
+    var firstDay = new Date(y, m, 1).getDay();
+    var daysInMonth = new Date(y, m + 1, 0).getDate();
+    var today = new Date(); today.setHours(0,0,0,0);
+    var cells = [];
+    for (var i = 0; i < firstDay; i++) cells.push(null);
+    for (var d = 1; d <= daysInMonth; d++) cells.push(d);
+
+    var getEventsForDay = function(day) {
+      var ds = String(y) + "-" + String(m + 1).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+      var renewals = calendarRenewals.filter(function(p) { return p.expirationDate === ds; });
+      var followups = calendarFollowUps.filter(function(f) { return f.dueDate === ds; });
+      return { renewals: renewals, followups: followups };
+    };
+
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{"Renewal Calendar"}</h2>
+          <div style={{ display: "flex", gap: 8 }}><button style={st.btn("outline")} onClick={function() { exportCSV("renewals"); }}><Download size={14} /> {"Export Renewals"}</button></div>
+        </div>
+        <div style={st.card}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <button style={st.btn("outline")} onClick={function() { setCalendarMonth(new Date(y, m - 1, 1)); }}><ChevronLeft size={16} /></button>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>{calendarMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</h3>
+            <button style={st.btn("outline")} onClick={function() { setCalendarMonth(new Date(y, m + 1, 1)); }}><ChevronRight size={16} /></button>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map(function(dayName) { return <div key={dayName} style={{ textAlign: "center", padding: 6, fontSize: 11, fontWeight: 600, color: "#64748b" }}>{dayName}</div>; })}
+            {cells.map(function(day, idx) {
+              if (!day) return <div key={"e" + String(idx)} style={{ minHeight: 80 }} />;
+              var evts = getEventsForDay(day);
+              var isToday = today.getFullYear() === y && today.getMonth() === m && today.getDate() === day;
+              return (
+                <div key={String(day)} style={{ minHeight: 80, background: isToday ? "rgba(29,78,216,0.06)" : "#0f1724", borderRadius: 6, padding: 6, border: isToday ? "1px solid rgba(29,78,216,0.25)" : "1px solid transparent" }}>
+                  <div style={{ fontSize: 12, fontWeight: isToday ? 700 : 500, color: isToday ? "#93c5fd" : "#94a3b8", marginBottom: 4 }}>{String(day)}</div>
+                  {evts.renewals.map(function(r) { var c = data.clients.find(function(cl) { return cl.id === r.clientId; }); return (
+                    <div key={r.id} onClick={function() { setSelectedClientId(r.clientId); setView("client-detail"); }} style={{ fontSize: 10, padding: "2px 4px", borderRadius: 3, background: "#78350f", color: "#fcd34d", marginBottom: 2, cursor: "pointer", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{"\u27f3 " + (c ? c.businessName.substring(0, 14) : "")}</div>
+                  ); })}
+                  {evts.followups.map(function(f) { return (
+                    <div key={f.id} style={{ fontSize: 10, padding: "2px 4px", borderRadius: 3, background: "#4c1d95", color: "#c4b5fd", marginBottom: 2, overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>{"\u2713 " + String(f.description || "").substring(0, 14)}</div>
+                  ); })}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 16, marginTop: 12, fontSize: 11, color: "#64748b" }}>
+            <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: "#78350f", marginRight: 4 }} />{"Renewal"}</span>
+            <span><span style={{ display: "inline-block", width: 10, height: 10, borderRadius: 2, background: "#4c1d95", marginRight: 4 }} />{"Follow-Up"}</span>
+          </div>
+        </div>
+
+        <div style={st.card}>
+          <div style={st.cardTitle}>{"Renewals This Month (" + String(calendarRenewals.length) + ")"}</div>
+          {calendarRenewals.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 12 }}>{"No renewals this month"}</p> : (
+            <div style={{ display: "grid", gap: 6, marginTop: 10 }}>
+              {calendarRenewals.slice().sort(function(a, b) { return new Date(a.expirationDate) - new Date(b.expirationDate); }).map(function(p) {
+                var c = data.clients.find(function(cl) { return cl.id === p.clientId; });
+                return (
+                  <div key={p.id} style={st.row} onClick={function() { setSelectedClientId(p.clientId); setView("client-detail"); }}>
+                    <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{c ? c.businessName : "Unknown"}</div><div style={{ fontSize: 11, color: "#64748b" }}>{String(p.coverageType) + " \xb7 " + String(p.carrier) + " \xb7 $" + parseFloat(p.premium || 0).toLocaleString()}</div></div>
+                    <span style={{ fontSize: 12, color: "#94a3b8", marginRight: 6 }}>{formatDateShort(p.expirationDate)}</span>
+                    <RenewalBadge days={daysUntil(p.expirationDate)} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // REPORTS
+  const ReportsView = function() {
+    var reportData = reportView === "carrier" ? premiumByCarrier : reportView === "coverage" ? premiumByCoverage : premiumByClient;
+    var reportTitle = reportView === "carrier" ? "Premium by Carrier" : reportView === "coverage" ? "Premium by Coverage" : "Premium by Client";
+
+    var snapshotItems = [
+      { label: "Total Clients", value: String(data.clients.length), color: "#3b82f6" },
+      { label: "Active Policies", value: String(activePolicies.length), color: "#10b981" },
+      { label: "Avg Premium / Policy", value: activePolicies.length ? "$" + Math.round(totalPremium / activePolicies.length).toLocaleString() : "$0", color: "#f59e0b" },
+      { label: "Avg Premium / Client", value: data.clients.length ? "$" + Math.round(totalPremium / data.clients.length).toLocaleString() : "$0", color: "#8b5cf6" },
+      { label: "Renewals (90 days)", value: String(upcomingRenewals.length), color: "#ef4444" },
+      { label: "Active Prospects", value: String(activeProspects.length), color: "#06b6d4" },
+      { label: "Pipeline Value", value: "$" + activeProspects.reduce(function(sum, p) { return sum + (parseFloat(p.estimatedPremium) || 0); }, 0).toLocaleString(), color: "#15803d" },
+      { label: "Won This Period", value: String(data.prospects.filter(function(p) { return p.stage === "Won"; }).length), color: "#10b981" },
+    ];
+
+    var reportTabs = [
+      { key: "carrier", label: "By Carrier" },
+      { key: "coverage", label: "By Coverage" },
+      { key: "client", label: "By Client" },
+    ];
+
+    return (
+      <div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{"Premium Reports"}</h2>
+          <button style={st.btn("outline")} onClick={function() { setModal("export"); }}><Download size={14} /> {"Export All"}</button>
+        </div>
+        <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+          {reportTabs.map(function(tab) {
+            return <button key={tab.key} style={st.navBtn(reportView === tab.key)} onClick={function() { setReportView(tab.key); }}>{tab.label}</button>;
+          })}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <div style={st.card}>
+            <div style={st.cardHeader}><div style={st.cardTitle}><PieChart size={16} color="#3b82f6" /> {reportTitle}</div></div>
+            <div style={{ marginBottom: 14, textAlign: "center" }}>
+              <div style={{ fontSize: 30, fontWeight: 800, color: "#f8fafc" }}>{"$" + totalPremium.toLocaleString()}</div>
+              <div style={{ fontSize: 12, color: "#64748b" }}>{"Total Active Premium"}</div>
+            </div>
+            <BarViz items={reportData} total={totalPremium} />
+          </div>
+          <div style={st.card}>
+            <div style={st.cardHeader}><div style={st.cardTitle}><BarChart3 size={16} color="#10b981" /> {"Book Snapshot"}</div></div>
+            <div style={{ display: "grid", gap: 14 }}>
+              {snapshotItems.map(function(item) {
+                return (
+                  <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid rgba(30,41,59,0.08)" }}>
+                    <span style={{ fontSize: 13, color: "#94a3b8" }}>{item.label}</span>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: item.color }}>{item.value}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div style={st.card}>
+          <div style={st.cardHeader}><div style={st.cardTitle}><TrendingUp size={16} color="#f59e0b" /> {"Pipeline Conversion"}</div></div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 4 }}>
+            {PIPELINE_STAGES.map(function(s2) {
+              var ct = pipelineStats[s2] ? pipelineStats[s2].count : 0;
+              var total = data.prospects.length || 1;
+              var sc = STAGE_COLORS[s2] || {};
+              return (
+                <div key={s2} style={{ textAlign: "center" }}>
+                  <div style={{ height: 100, display: "flex", alignItems: "flex-end", justifyContent: "center", marginBottom: 6 }}>
+                    <div style={{ width: "60%", background: sc.bg || "#1e293b", borderRadius: "4px 4px 0 0", height: String(Math.max(8, (ct / total) * 100)) + "%", border: "1px solid " + (sc.fg || "#94a3b8") + "30", transition: "height 0.4s" }} />
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: sc.fg || "#94a3b8" }}>{String(ct)}</div>
+                  <div style={{ fontSize: 10, color: "#64748b", lineHeight: 1.2 }}>{s2}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // MAIN RENDER
+  return (
+    <div style={st.app}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+      {toast && <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#15803d", color: "#fff", padding: "10px 24px", borderRadius: 10, fontSize: 13, fontWeight: 600, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>{toast}</div>}
+
+      <header style={st.header}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}><Shield size={20} color="#3b82f6" /><div><div style={{ fontSize: 17, fontWeight: 700, color: "#f8fafc", letterSpacing: "-0.02em" }}>{"Sentinel CRM"}</div><div style={{ fontSize: 10, color: "#64748b", fontWeight: 500 }}>{"Commercial & Sales Management"}</div></div></div>
+        <nav style={st.nav}>
+          {NAV_ITEMS.map(function(item) {
+            var IconComp = item.Icon;
+            var active = view === item.key || (item.key === "clients" && view === "client-detail") || (item.key === "pipeline" && view === "prospect-detail");
+            return (
+              <button key={item.key} style={st.navBtn(active)} onClick={function() { setView(item.key); setSelectedClientId(null); setSelectedProspectId(null); setSearchTerm(""); setEmailMenuFor(null); }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 5 }}><IconComp size={13} /> {item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </header>
+
+      <main style={st.main}>
+        {view === "dashboard" && <Dashboard />}
+        {view === "clients" && <ClientsList />}
+        {view === "client-detail" && <ClientDetail />}
+        {view === "pipeline" && <PipelineView />}
+        {view === "prospect-detail" && <ProspectDetail />}
+        {view === "calendar" && <CalendarView />}
+        {view === "reports" && <ReportsView />}
+      </main>
+
+      {modal === "add-client" && <ClientForm onSave={addClient} />}
+      {modal === "edit-client" && editItem && <ClientForm client={editItem} onSave={updateClient} />}
+      {modal === "add-policy" && <PolicyForm clientId={selectedClientId} onSave={addPolicy} />}
+      {modal === "edit-policy" && editItem && <PolicyForm policy={editItem} clientId={selectedClientId} onSave={updatePolicy} />}
+      {modal === "add-activity-client" && <ActivityForm clientId={selectedClientId} />}
+      {modal === "add-activity-prospect" && <ActivityForm prospectId={selectedProspectId} />}
+      {modal === "add-followup" && <FollowUpForm clientId={selectedClientId} />}
+      {modal === "add-prospect" && <ProspectForm onSave={addProspect} />}
+      {modal === "edit-prospect" && editItem && <ProspectForm prospect={editItem} onSave={updateProspect} />}
+      {modal === "export" && <ExportModal />}
+      <EmailComposeModal />
+    </div>
+  );
+}
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<SentinelCRM />);
+  </script>
+</body>
+</html>
