@@ -73,11 +73,14 @@ const STORAGE_KEY = "sentinel-crm-v2";
 const COVERAGE_TYPES_COMMERCIAL = ["General Liability", "BOP", "Workers Comp", "Commercial Auto", "Umbrella", "Professional Liability", "Inland Marine", "Property", "Cyber", "EPLI", "Other"];
 const COVERAGE_TYPES_PERSONAL = ["Auto", "Homeowners", "Renters", "Condo", "Umbrella", "Flood", "Motorcycle", "Boat/Watercraft", "Life", "Other"];
 const CARRIERS = ["Allstate", "Hartford", "Travelers", "CNA", "Progressive Commercial", "EMPLOYERS", "AmTrust", "Nationwide", "Liberty Mutual", "Citizens", "Universal", "Slide", "Heritage", "Other"];
+const CARRIER_SUGGESTIONS = ["Allstate", "Hartford", "Travelers", "CNA", "Progressive Commercial", "Progressive", "EMPLOYERS", "AmTrust", "Nationwide", "Liberty Mutual", "Citizens", "Universal", "Slide", "Heritage", "GEICO", "State Farm", "USAA", "Chubb", "Zurich", "Markel", "Hanover", "Auto-Owners", "Erie", "Safeco", "Foremost", "American Integrity", "Security First", "Tower Hill", "Federated National", "TypTap", "Openly", "SageSure", "Palomar", "Weston", "Florida Peninsula", "FCCI", "Guard", "Berkshire Hathaway", "Farmers", "Mercury"];
 const ACTIVITY_TYPES = ["Phone Call", "Email", "In-Person Meeting", "Quote Sent", "Policy Review", "Renewal Follow-up", "Referral", "BNI Contact", "Cold Call", "Note"];
 const INDUSTRIES = ["Restaurant/Food Service", "Retail", "Construction", "Healthcare", "Childcare", "Professional Services", "Real Estate", "Auto Services", "Pest Control", "Manufacturing", "Technology", "Cleaning Services", "Landscaping", "Salon/Barbershop", "Other"];
+const INDUSTRY_SUGGESTIONS = ["Restaurant/Food Service", "Retail", "Construction", "Healthcare", "Childcare/Daycare", "Professional Services", "Real Estate", "Auto Services", "Pest Control", "Manufacturing", "Technology", "Cleaning Services", "Landscaping", "Salon/Barbershop", "Legal Services", "Accounting/Finance", "Fitness/Gym", "Plumbing/HVAC", "Electrical", "Roofing", "Trucking/Transportation", "Wholesale/Distribution", "Nonprofit", "Education", "Hospitality/Hotel", "Marine Services", "Agriculture", "Entertainment", "Staffing Agency", "Consulting", "Property Management", "Security Services", "Printing/Signage", "Veterinary", "Dental", "Photography/Video"];
 const PIPELINE_STAGES = ["New Lead", "Contacted", "Quote Sent", "Follow-Up", "Negotiating", "Won", "Lost"];
 const LEAD_SOURCES = ["BNI Referral", "Client Referral", "Walk-In", "Website", "Social Media", "Cold Call", "Allstate Lead", "Google", "Door-to-Door", "Networking Event", "Other"];
 const LINE_TYPES = ["Personal", "Commercial"];
+const DOC_TYPES = ["Dec Page", "Application", "Quote", "Endorsement", "Certificate of Insurance", "Loss Runs", "Audit", "Cancellation Notice", "Binder", "Signed Forms", "Photos", "Wind Mitigation", "4-Point Inspection", "Roof Report", "Other"];
 
 const STAGE_COLORS = {
   "New Lead": { bg: "#1e3a5f", fg: "#7dd3fc" },
@@ -112,10 +115,6 @@ const toCSVSafe = (val) => { const str = String(val == null ? "" : val); return 
 
 const defaultData = { clients: [], policies: [], activities: [], followUps: [], prospects: [] };
 
-// Email helpers
-const openEmail = (to, subject, body) => { window.location.href = "mailto:" + (to || "") + "?subject=" + encodeURIComponent(subject || "") + "&body=" + encodeURIComponent(body || ""); };
-// Copy to clipboard
-const copyToClipboard = (text) => { try { var ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.left = "-9999px"; ta.style.top = "-9999px"; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); return true; } catch(e) { return false; } };
 
 // Sub-components defined outside main component for clean hoisting
 const FileIconSvg = ({ size }) => (
@@ -175,6 +174,102 @@ const BarViz = ({ items, total, maxItems }) => (
   </div>
 );
 
+
+// === PASSWORD GATE ===
+const AUTH_KEY = "sentinel-crm-auth";
+const LOGO_SRC = "data:image/png;base64,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";
+
+async function hashPassword(pw) {
+  var enc = new TextEncoder().encode(pw);
+  var buf = await crypto.subtle.digest("SHA-256", enc);
+  return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, "0"); }).join("");
+}
+
+function PasswordGate(props) {
+  const [authed, setAuthed] = useState(false);
+  const [checking, setChecking] = useState(true);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [isSetup, setIsSetup] = useState(false);
+
+  useEffect(function() {
+    var stored = localStorage.getItem(AUTH_KEY);
+    if (!stored) { setIsSetup(true); setChecking(false); }
+    else {
+      var session = sessionStorage.getItem("sentinel-session");
+      if (session === "active") { setAuthed(true); }
+      setChecking(false);
+    }
+  }, []);
+
+  var handleSetup = async function() {
+    if (password.length < 4) { setError("Password must be at least 4 characters"); return; }
+    if (password !== confirm) { setError("Passwords don't match"); return; }
+    var hash = await hashPassword(password);
+    localStorage.setItem(AUTH_KEY, hash);
+    sessionStorage.setItem("sentinel-session", "active");
+    setAuthed(true);
+  };
+
+  var handleLogin = async function() {
+    var hash = await hashPassword(password);
+    var stored = localStorage.getItem(AUTH_KEY);
+    if (hash === stored) {
+      sessionStorage.setItem("sentinel-session", "active");
+      setAuthed(true);
+      setError("");
+    } else {
+      setError("Incorrect password");
+      setPassword("");
+    }
+  };
+
+  var handleKey = function(e) { if (e.key === "Enter") { isSetup ? handleSetup() : handleLogin(); } };
+
+  if (checking) return React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#0f1724", color: "#94a3b8" } }, "Loading...");
+  if (authed) return props.children;
+
+  var gateStyles = {
+    wrap: { display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "#0f1724", fontFamily: "'DM Sans', sans-serif" },
+    card: { background: "#1a2436", borderRadius: 16, border: "1px solid #1e293b", padding: "40px 36px", width: "100%", maxWidth: 400, textAlign: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" },
+    logo: { height: 36, marginBottom: 20, mixBlendMode: "screen" },
+    title: { fontSize: 18, fontWeight: 700, color: "#f8fafc", marginBottom: 6 },
+    sub: { fontSize: 13, color: "#64748b", marginBottom: 24 },
+    input: { width: "100%", padding: "12px 14px", borderRadius: 10, border: "1px solid #334155", background: "#0f1724", color: "#e2e8f0", fontSize: 14, outline: "none", boxSizing: "border-box", marginBottom: 12 },
+    btn: { width: "100%", padding: "12px 16px", borderRadius: 10, border: "none", background: "#1d4ed8", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer", marginTop: 4 },
+    err: { fontSize: 12, color: "#f87171", marginBottom: 8 },
+    lock: { fontSize: 36, marginBottom: 12 }
+  };
+
+  if (isSetup) {
+    return React.createElement("div", { style: gateStyles.wrap },
+      React.createElement("div", { style: gateStyles.card },
+        React.createElement("img", { src: LOGO_SRC, alt: "Sentinel Insurance", style: gateStyles.logo }),
+        React.createElement("div", { style: gateStyles.lock }, "\u{1F512}"),
+        React.createElement("div", { style: gateStyles.title }, "Set Up Password"),
+        React.createElement("div", { style: gateStyles.sub }, "Protect your CRM data with a password"),
+        error && React.createElement("div", { style: gateStyles.err }, error),
+        React.createElement("input", { style: gateStyles.input, type: "password", placeholder: "Create password", value: password, onChange: function(e) { setPassword(e.target.value); setError(""); }, onKeyDown: handleKey }),
+        React.createElement("input", { style: gateStyles.input, type: "password", placeholder: "Confirm password", value: confirm, onChange: function(e) { setConfirm(e.target.value); setError(""); }, onKeyDown: handleKey }),
+        React.createElement("button", { style: gateStyles.btn, onClick: handleSetup }, "Set Password & Enter")
+      )
+    );
+  }
+
+  return React.createElement("div", { style: gateStyles.wrap },
+    React.createElement("div", { style: gateStyles.card },
+      React.createElement("img", { src: LOGO_SRC, alt: "Sentinel Insurance", style: gateStyles.logo }),
+      React.createElement("div", { style: gateStyles.lock }, "\u{1F512}"),
+      React.createElement("div", { style: gateStyles.title }, "Sentinel CRM"),
+      React.createElement("div", { style: gateStyles.sub }, "Enter your password to continue"),
+      error && React.createElement("div", { style: gateStyles.err }, error),
+      React.createElement("input", { style: gateStyles.input, type: "password", placeholder: "Password", value: password, autoFocus: true, onChange: function(e) { setPassword(e.target.value); setError(""); }, onKeyDown: handleKey }),
+      React.createElement("button", { style: gateStyles.btn, onClick: handleLogin }, "Unlock")
+    )
+  );
+}
+
 function SentinelCRM() {
   const [data, setData] = useState(defaultData);
   const [loading, setLoading] = useState(true);
@@ -191,8 +286,6 @@ function SentinelCRM() {
   const [reportView, setReportView] = useState("carrier");
   const [toast, setToast] = useState(null);
   const [emailMenuFor, setEmailMenuFor] = useState(null);
-  const [emailCompose, setEmailCompose] = useState(null);
-  const [emailCopied, setEmailCopied] = useState("");
 
   useEffect(function() {
     (async function() {
@@ -238,6 +331,40 @@ function SentinelCRM() {
   const toggleFollowUp = function(id) { saveData({ ...data, followUps: data.followUps.map(function(f) { return f.id === id ? { ...f, completed: !f.completed, completedDate: !f.completed ? new Date().toISOString() : null } : f; }) }); };
   const deleteFollowUp = function(id) { saveData({ ...data, followUps: data.followUps.filter(function(f) { return f.id !== id; }) }); };
 
+  // Document tracking
+  const addDocument = function(d) { saveData({ ...data, documents: [...(data.documents || []), { ...d, id: generateId(), dateAdded: new Date().toISOString() }] }); setModal(null); showToast("Document tracked"); };
+  const deleteDocument = function(id) { if (!confirm("Remove this document record?")) return; saveData({ ...data, documents: (data.documents || []).filter(function(d) { return d.id !== id; }) }); };
+  const clientDocuments = (data.documents || []).filter(function(d) { return d.clientId === selectedClientId; }).sort(function(a, b) { return new Date(b.dateAdded) - new Date(a.dateAdded); });
+
+  // Renewal workflows
+  const addRenewalWorkflow = function(policyId) {
+    var pol = data.policies.find(function(p) { return p.id === policyId; });
+    if (!pol || !pol.expirationDate) return;
+    var exp = new Date(pol.expirationDate);
+    var steps = [
+      { day: 150, label: "Begin Marketing", desc: "Pull loss runs, review coverage, identify remarketing opportunities" },
+      { day: 120, label: "Submit to Markets", desc: "Send applications to carriers for quotes" },
+      { day: 90, label: "Review Quotes", desc: "Compare options, prepare renewal proposal" },
+      { day: 60, label: "Present to Client", desc: "Review renewal options, discuss coverage changes" },
+      { day: 30, label: "Bind Coverage", desc: "Finalize selection, request binding, issue certificates" },
+      { day: 14, label: "Confirm Renewal", desc: "Verify policy issued, update records, deliver documents" }
+    ].map(function(s) {
+      var target = new Date(exp); target.setDate(target.getDate() - s.day);
+      return { ...s, targetDate: target.toISOString().split("T")[0], completed: false, completedDate: null };
+    });
+    var wf = { id: generateId(), policyId: policyId, clientId: pol.clientId, expirationDate: pol.expirationDate, steps: steps, createdAt: new Date().toISOString() };
+    saveData({ ...data, renewalWorkflows: [...(data.renewalWorkflows || []), wf] });
+    showToast("Renewal workflow started");
+  };
+  const toggleWorkflowStep = function(wfId, stepIdx) {
+    saveData({ ...data, renewalWorkflows: (data.renewalWorkflows || []).map(function(wf) {
+      if (wf.id !== wfId) return wf;
+      var newSteps = wf.steps.map(function(s, i) { return i === stepIdx ? { ...s, completed: !s.completed, completedDate: !s.completed ? new Date().toISOString() : null } : s; });
+      return { ...wf, steps: newSteps };
+    }) });
+  };
+  const clientWorkflows = (data.renewalWorkflows || []).filter(function(w) { return w.clientId === selectedClientId; });
+
   // PROSPECT OPS
   const addProspect = function(p) { const np = { ...p, id: generateId(), createdAt: new Date().toISOString() }; saveData({ ...data, prospects: [...data.prospects, np] }); setModal(null); showToast("Prospect added"); };
   const updateProspect = function(p) { saveData({ ...data, prospects: data.prospects.map(function(x) { return x.id === p.id ? p : x; }) }); setModal(null); setEditItem(null); showToast("Prospect updated"); };
@@ -265,6 +392,7 @@ function SentinelCRM() {
   const activeProspects = data.prospects.filter(function(p) { return p.stage !== "Won" && p.stage !== "Lost"; });
 
   const filteredClients = data.clients.filter(function(c) {
+    var displayName = c.lineType === "Personal" ? c.contactName : c.businessName;
     const ms = !searchTerm || c.businessName.toLowerCase().includes(searchTerm.toLowerCase()) || (c.contactName || "").toLowerCase().includes(searchTerm.toLowerCase());
     const mi = filterIndustry === "all" || c.industry === filterIndustry;
     return ms && mi;
@@ -307,11 +435,11 @@ function SentinelCRM() {
   const exportCSV = function(type) {
     let csv = "";
     if (type === "clients") {
-      csv = "Business Name,Contact,Phone,Email,Address,Industry,Active Policies,Total Premium,Notes\n";
+      csv = "Type,Name,Contact,Phone,Email,Address,Industry,Active Policies,Total Premium,Notes\n";
       data.clients.forEach(function(c) {
         const pols = data.policies.filter(function(p) { return p.clientId === c.id && p.status === "active"; });
         const prem = pols.reduce(function(sum, p) { return sum + (parseFloat(p.premium) || 0); }, 0);
-        csv += [c.businessName, c.contactName, c.phone, c.email, c.address, c.industry, pols.length, prem, c.notes].map(toCSVSafe).join(",") + "\n";
+        csv += [c.lineType || "Commercial", c.lineType === "Personal" ? c.contactName : c.businessName, c.contactName, c.phone, c.email, c.address, c.industry, pols.length, prem, c.notes].map(toCSVSafe).join(",") + "\n";
       });
     } else if (type === "policies") {
       csv = "Client,Coverage Type,Carrier,Policy Number,Premium,Effective Date,Expiration Date,Status,Notes\n";
@@ -418,14 +546,20 @@ function SentinelCRM() {
   const ClientForm = function(props) {
     const client = props.client;
     const onSave = props.onSave;
-    const [f, sF] = useState(client || { businessName: "", contactName: "", phone: "", email: "", address: "", industry: "", notes: "" });
+    const [f, sF] = useState(client || { lineType: "Personal", businessName: "", contactName: "", phone: "", email: "", address: "", industry: "", notes: "" });
+    var canSave = f.lineType === "Personal" ? f.contactName : (f.businessName && f.contactName);
     return (
-      <ModalWrap title={client ? "Edit Client" : "New Commercial Client"}>
+      <ModalWrap title={client ? "Edit Client" : "New Client"}>
         <div style={{ display: "grid", gap: 12 }}>
-          <FormField label="Business Name *"><input style={st.input} value={f.businessName} onChange={function(e) { sF({ ...f, businessName: e.target.value }); }} placeholder="ABC Pest Control" /></FormField>
+          <FormField label="Client Type">
+            <div style={{ display: "flex", gap: 6 }}>
+              {LINE_TYPES.map(function(lt) { return <button key={lt} onClick={function() { sF({ ...f, lineType: lt }); }} style={{ flex: 1, padding: "8px 12px", borderRadius: 8, border: "1px solid", borderColor: f.lineType === lt ? "#3b82f6" : "#334155", background: f.lineType === lt ? "rgba(29,78,216,0.15)" : "transparent", color: f.lineType === lt ? "#93c5fd" : "#94a3b8", fontSize: 13, cursor: "pointer", fontWeight: 600 }}>{lt === "Personal" ? "\u{1F464} Personal" : "\u{1F3E2} Commercial"}</button>; })}
+            </div>
+          </FormField>
+          {f.lineType === "Commercial" && <FormField label="Business Name *"><input style={st.input} value={f.businessName} onChange={function(e) { sF({ ...f, businessName: e.target.value }); }} placeholder="ABC Pest Control" /></FormField>}
           <FormGrid>
-            <FormField label="Contact Name *"><input style={st.input} value={f.contactName} onChange={function(e) { sF({ ...f, contactName: e.target.value }); }} placeholder="John Smith" /></FormField>
-            <FormField label="Industry"><select style={st.select} value={f.industry} onChange={function(e) { sF({ ...f, industry: e.target.value }); }}><option value="">{"Select..."}</option>{INDUSTRIES.map(function(i) { return <option key={i} value={i}>{i}</option>; })}</select></FormField>
+            <FormField label={f.lineType === "Personal" ? "Full Name *" : "Contact Name *"}><input style={st.input} value={f.contactName} onChange={function(e) { sF({ ...f, contactName: e.target.value }); }} placeholder={f.lineType === "Personal" ? "Jane Doe" : "John Smith"} /></FormField>
+            {f.lineType === "Commercial" && <FormField label="Industry"><input style={st.input} list="industry-list" value={f.industry} onChange={function(e) { sF({ ...f, industry: e.target.value }); }} placeholder="Type or select..." /><datalist id="industry-list">{INDUSTRY_SUGGESTIONS.map(function(i) { return <option key={i} value={i} />; })}</datalist></FormField>}
           </FormGrid>
           <FormGrid>
             <FormField label="Phone"><input style={st.input} value={f.phone} onChange={function(e) { sF({ ...f, phone: e.target.value }); }} placeholder="(954) 555-0123" /></FormField>
@@ -433,7 +567,7 @@ function SentinelCRM() {
           </FormGrid>
           <FormField label="Address"><input style={st.input} value={f.address} onChange={function(e) { sF({ ...f, address: e.target.value }); }} placeholder="123 Main St, Fort Lauderdale, FL" /></FormField>
           <FormField label="Notes"><textarea style={{ ...st.input, height: 60, resize: "vertical" }} value={f.notes} onChange={function(e) { sF({ ...f, notes: e.target.value }); }} /></FormField>
-          <FormActions><button style={st.btn("primary")} onClick={function() { if (f.businessName && f.contactName) onSave(f); }} disabled={!f.businessName || !f.contactName}><Save size={14} /> {client ? "Update" : "Add Client"}</button></FormActions>
+          <FormActions><button style={st.btn("primary")} onClick={function() { if (canSave) onSave(f); }} disabled={!canSave}><Save size={14} /> {client ? "Update" : "Add Client"}</button></FormActions>
         </div>
       </ModalWrap>
     );
@@ -455,7 +589,7 @@ function SentinelCRM() {
                 <optgroup label="Personal">{COVERAGE_TYPES_PERSONAL.map(function(t) { return <option key={t} value={t}>{t}</option>; })}</optgroup>
               </select>
             </FormField>
-            <FormField label="Carrier *"><select style={st.select} value={f.carrier} onChange={function(e) { sF({ ...f, carrier: e.target.value }); }}><option value="">{"Select..."}</option>{CARRIERS.map(function(c) { return <option key={c} value={c}>{c}</option>; })}</select></FormField>
+            <FormField label="Carrier *"><input style={st.input} list="carrier-list" value={f.carrier} onChange={function(e) { sF({ ...f, carrier: e.target.value }); }} placeholder="Type or select carrier..." /><datalist id="carrier-list">{CARRIER_SUGGESTIONS.map(function(c) { return <option key={c} value={c} />; })}</datalist></FormField>
           </FormGrid>
           <FormGrid>
             <FormField label="Policy Number"><input style={st.input} value={f.policyNumber} onChange={function(e) { sF({ ...f, policyNumber: e.target.value }); }} placeholder="POL-12345" /></FormField>
@@ -506,6 +640,24 @@ function SentinelCRM() {
     );
   };
 
+  const DocumentForm = function(props) {
+    const [f, sF] = useState({ clientId: props.clientId, policyId: "", docType: "", name: "", notes: "" });
+    var cPolicies = data.policies.filter(function(p) { return p.clientId === props.clientId; });
+    return (
+      <ModalWrap title="Track Document">
+        <div style={{ display: "grid", gap: 12 }}>
+          <FormGrid>
+            <FormField label="Document Type *"><select style={st.select} value={f.docType} onChange={function(e) { sF({ ...f, docType: e.target.value }); }}><option value="">{"Select..."}</option>{DOC_TYPES.map(function(t) { return <option key={t} value={t}>{t}</option>; })}</select></FormField>
+            <FormField label="Linked Policy"><select style={st.select} value={f.policyId} onChange={function(e) { sF({ ...f, policyId: e.target.value }); }}><option value="">{"None"}</option>{cPolicies.map(function(p) { return <option key={p.id} value={p.id}>{p.coverageType + " - " + p.carrier}</option>; })}</select></FormField>
+          </FormGrid>
+          <FormField label="Document Name *"><input style={st.input} value={f.name} onChange={function(e) { sF({ ...f, name: e.target.value }); }} placeholder="2025 GL Dec Page" /></FormField>
+          <FormField label="Notes"><textarea style={{ ...st.input, height: 60, resize: "vertical" }} value={f.notes} onChange={function(e) { sF({ ...f, notes: e.target.value }); }} placeholder="Location, reference number, etc." /></FormField>
+          <FormActions><button style={st.btn("primary")} onClick={function() { if (f.docType && f.name) addDocument(f); }} disabled={!f.docType || !f.name}><Save size={14} /> {"Track Document"}</button></FormActions>
+        </div>
+      </ModalWrap>
+    );
+  };
+
   const ProspectForm = function(props) {
     const prospect = props.prospect;
     const onSave = props.onSave;
@@ -531,7 +683,7 @@ function SentinelCRM() {
           <FormField label="Address"><input style={st.input} value={f.address} onChange={function(e) { sF({ ...f, address: e.target.value }); }} placeholder="Fort Lauderdale, FL" /></FormField>
           {f.lineType === "Commercial" && (
             <FormGrid>
-              <FormField label="Industry"><select style={st.select} value={f.industry} onChange={function(e) { sF({ ...f, industry: e.target.value }); }}><option value="">{"Select..."}</option>{INDUSTRIES.map(function(i) { return <option key={i} value={i}>{i}</option>; })}</select></FormField>
+              <FormField label="Industry"><input style={st.input} list="industry-list-p" value={f.industry} onChange={function(e) { sF({ ...f, industry: e.target.value }); }} placeholder="Type or select..." /><datalist id="industry-list-p">{INDUSTRY_SUGGESTIONS.map(function(i) { return <option key={i} value={i} />; })}</datalist></FormField>
               <FormField label="Stage"><select style={st.select} value={f.stage} onChange={function(e) { sF({ ...f, stage: e.target.value }); }}>{PIPELINE_STAGES.map(function(s2) { return <option key={s2} value={s2}>{s2}</option>; })}</select></FormField>
             </FormGrid>
           )}
@@ -607,84 +759,30 @@ function SentinelCRM() {
       <div style={{ position: "absolute", right: position.right || 0, top: position.top || "100%", marginTop: position.marginTop || 4, background: "#1a2436", border: "1px solid #334155", borderRadius: 10, padding: 6, minWidth: 220, zIndex: 60, boxShadow: "0 8px 24px rgba(0,0,0,0.4)" }}>
         <div style={{ padding: "6px 10px", fontSize: 10, color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>{"Email Templates"}</div>
         {templates.map(function(tpl) {
+          var mailtoUrl = "mailto:" + email + "?subject=" + encodeURIComponent(tpl.subject || "") + "&body=" + encodeURIComponent(tpl.body || "");
           return (
-            <button key={tpl.label} onClick={function(e) {
+            <a key={tpl.label} href={mailtoUrl} onClick={function(e) {
               e.stopPropagation();
-              openEmail(email, tpl.subject, tpl.body); setEmailCompose({ to: email, subject: tpl.subject, body: tpl.body, label: tpl.label, entityType: entityType, entity: entity, name: name });
               addActivity({ clientId: entityType === "client" ? entity.id : undefined, prospectId: entityType === "prospect" ? entity.id : undefined, type: "Email", notes: "Email: " + tpl.label + " to " + name, date: new Date().toISOString().split("T")[0] });
               setEmailMenuFor(null);
-            }} style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 10px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", color: "#e2e8f0" }}>
+            }} style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 10px", background: "transparent", border: "none", borderRadius: 6, cursor: "pointer", color: "#e2e8f0", textDecoration: "none" }}>
               <div style={{ fontSize: 13, fontWeight: 500 }}>{tpl.label}</div>
               <div style={{ fontSize: 11, color: "#64748b" }}>{tpl.desc}</div>
-            </button>
+            </a>
           );
         })}
       </div>
     );
   };
 
-  // Email Compose Modal
-  const EmailComposeModal = function() {
-    if (!emailCompose) return null;
-    var ec = emailCompose;
-    var copyField = function(field, value) {
-      copyToClipboard(value);
-      setEmailCopied(field);
-      setTimeout(function() { setEmailCopied(""); }, 2000);
-    };
-    var copyAll = function() {
-      var full = "To: " + ec.to + "\nSubject: " + ec.subject + "\n\n" + ec.body;
-      copyToClipboard(full);
-      setEmailCopied("all");
-      setTimeout(function() { setEmailCopied(""); }, 2000);
-    };
-    var cpBtn = function(field, value) {
-      return React.createElement("button", { onClick: function() { copyField(field, value); }, style: { padding: "4px 10px", background: emailCopied === field ? "#22c55e" : "#3b82f6", color: "#fff", border: "none", borderRadius: 6, fontSize: 11, cursor: "pointer", fontWeight: 600, minWidth: 60 } }, emailCopied === field ? "Copied!" : "Copy");
-    };
-    return (
-      <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }} onClick={function() { setEmailCompose(null); setEmailCopied(""); }}>
-        <div style={{ background: "#1e293b", borderRadius: 14, padding: 24, width: "90%", maxWidth: 520, maxHeight: "80vh", overflow: "auto", border: "1px solid #334155" }} onClick={function(e) { e.stopPropagation(); }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ margin: 0, color: "#f1f5f9", fontSize: 16 }}>{"📧 Email Compose"}</h3>
-            <button onClick={function() { setEmailCompose(null); setEmailCopied(""); }} style={{ background: "transparent", border: "none", color: "#94a3b8", fontSize: 20, cursor: "pointer" }}>{"×"}</button>
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <label style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{"TO"}</label>
-              {cpBtn("to", ec.to)}
-            </div>
-            <div style={{ background: "#0f172a", borderRadius: 8, padding: "8px 12px", color: "#e2e8f0", fontSize: 13, border: "1px solid #334155" }}>{ec.to}</div>
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <label style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{"SUBJECT"}</label>
-              {cpBtn("subject", ec.subject)}
-            </div>
-            <div style={{ background: "#0f172a", borderRadius: 8, padding: "8px 12px", color: "#e2e8f0", fontSize: 13, border: "1px solid #334155" }}>{ec.subject || "(no subject)"}</div>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-              <label style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>{"BODY"}</label>
-              {cpBtn("body", ec.body)}
-            </div>
-            <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 12px", color: "#e2e8f0", fontSize: 13, border: "1px solid #334155", whiteSpace: "pre-wrap", maxHeight: 250, overflow: "auto", lineHeight: 1.5 }}>{ec.body || "(empty)"}</div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={copyAll} style={{ flex: 1, padding: "10px 16px", background: emailCopied === "all" ? "#22c55e" : "#3b82f6", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>{emailCopied === "all" ? "✓ All Copied!" : "Copy Entire Email"}</button>
-            <button onClick={function() { setEmailCompose(null); setEmailCopied(""); }} style={{ padding: "10px 16px", background: "#334155", color: "#e2e8f0", border: "none", borderRadius: 8, fontSize: 13, cursor: "pointer" }}>{"Close"}</button>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
-  // === VIEWS ===
+    // === VIEWS ===
 
   const Dashboard = function() {
     return (
       <div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{"Dashboard"}</h2><p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>{"Sentinel Insurance \u2014 Commercial & Sales Overview"}</p></div>
+          <div><h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{"Dashboard"}</h2><p style={{ margin: "2px 0 0", fontSize: 12, color: "#64748b" }}>{"Sentinel Insurance \u2014 Service & Sales Overview"}</p></div>
           <div style={{ display: "flex", gap: 8 }}>
             <button style={st.btn("outline")} onClick={function() { setModal("export"); }}><Download size={14} /> {"Export"}</button>
             <button style={st.btn("primary")} onClick={function() { setModal("add-client"); }}><Plus size={14} /> {"Client"}</button>
@@ -830,7 +928,8 @@ function SentinelCRM() {
         <div style={{ ...st.card, display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{String(selectedClient.businessName)}</h2>
+              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: "#f8fafc" }}>{String(selectedClient.lineType === "Personal" ? selectedClient.contactName : selectedClient.businessName)}</h2>
+              <span style={{ fontSize: 12, color: selectedClient.lineType === "Personal" ? "#a78bfa" : "#34d399", background: selectedClient.lineType === "Personal" ? "rgba(139,92,246,0.1)" : "rgba(16,185,129,0.1)", padding: "2px 10px", borderRadius: 6 }}>{selectedClient.lineType === "Personal" ? "Personal" : "Commercial"}</span>
               {selectedClient.industry && <span style={{ fontSize: 12, color: "#3b82f6", background: "rgba(29,78,216,0.08)", padding: "2px 10px", borderRadius: 6 }}>{String(selectedClient.industry)}</span>}
             </div>
             <div style={{ display: "flex", gap: 14, marginTop: 8, flexWrap: "wrap", fontSize: 13, color: "#94a3b8" }}>
@@ -916,6 +1015,77 @@ function SentinelCRM() {
             )}
           </div>
         </div>
+
+        <div style={st.card}>
+          <div style={st.cardHeader}><div style={st.cardTitle}><Download size={16} color="#06b6d4" /> {"Documents (" + String(clientDocuments.length) + ")"}</div><button style={st.btn("primary")} onClick={function() { setModal("add-document"); }}><Plus size={14} /> {"Add"}</button></div>
+          {clientDocuments.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 14 }}>{"No documents tracked yet"}</p> : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead><tr><th style={st.th}>{"Type"}</th><th style={st.th}>{"Name"}</th><th style={st.th}>{"Policy"}</th><th style={st.th}>{"Date Added"}</th><th style={st.th}>{"Notes"}</th><th style={st.th}>{""}</th></tr></thead>
+                <tbody>
+                  {clientDocuments.map(function(d) {
+                    var linkedPolicy = d.policyId ? data.policies.find(function(p) { return p.id === d.policyId; }) : null;
+                    return (
+                      <tr key={d.id}>
+                        <td style={{ ...st.td }}><span style={{ padding: "2px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600, background: "#164e63", color: "#67e8f9" }}>{String(d.docType)}</span></td>
+                        <td style={{ ...st.td, fontWeight: 600 }}>{String(d.name)}</td>
+                        <td style={st.td}>{linkedPolicy ? (linkedPolicy.coverageType + " - " + linkedPolicy.carrier) : "\u2014"}</td>
+                        <td style={st.td}>{formatDateShort(d.dateAdded)}</td>
+                        <td style={{ ...st.td, fontSize: 12, color: "#94a3b8" }}>{d.notes || "\u2014"}</td>
+                        <td style={st.td}><button onClick={function() { deleteDocument(d.id); }} style={st.btn("xs")}><Trash2 size={11} color="#f87171" /></button></td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {selectedClient.lineType !== "Personal" && (
+          <div style={st.card}>
+            <div style={st.cardHeader}>
+              <div style={st.cardTitle}><Target size={16} color="#f59e0b" /> {"Renewal Workflows"}</div>
+              {clientPolicies.filter(function(p) { return p.status === "active" && p.expirationDate; }).length > 0 && (
+                <div style={{ position: "relative" }}>
+                  <button style={st.btn("primary")} onClick={function() { setModal("start-workflow"); }}><Zap size={14} /> {"Start Workflow"}</button>
+                </div>
+              )}
+            </div>
+            {clientWorkflows.length === 0 ? <p style={{ color: "#475569", fontSize: 13, textAlign: "center", padding: 14 }}>{"No active renewal workflows. Start one from an active commercial policy."}</p> : (
+              <div style={{ display: "grid", gap: 12 }}>
+                {clientWorkflows.map(function(wf) {
+                  var pol = data.policies.find(function(p) { return p.id === wf.policyId; });
+                  var completedCount = wf.steps.filter(function(s) { return s.completed; }).length;
+                  return (
+                    <div key={wf.id} style={{ background: "#0f1724", borderRadius: 10, padding: 14, border: "1px solid #1e293b" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                        <div><div style={{ fontSize: 14, fontWeight: 600, color: "#f8fafc" }}>{pol ? (pol.coverageType + " - " + pol.carrier) : "Policy"}</div><div style={{ fontSize: 11, color: "#64748b" }}>{"Exp: " + formatDateShort(wf.expirationDate) + " \u2022 " + String(completedCount) + "/" + String(wf.steps.length) + " steps done"}</div></div>
+                        <div style={{ width: 60, height: 6, background: "#1e293b", borderRadius: 3 }}><div style={{ width: String(Math.round(completedCount / wf.steps.length * 100)) + "%", height: "100%", background: completedCount === wf.steps.length ? "#10b981" : "#f59e0b", borderRadius: 3, transition: "width 0.3s" }} /></div>
+                      </div>
+                      <div style={{ display: "grid", gap: 4 }}>
+                        {wf.steps.map(function(step, idx) {
+                          var daysDiff = daysUntil(step.targetDate);
+                          var isOverdue = !step.completed && daysDiff < 0;
+                          return (
+                            <div key={idx} style={{ display: "flex", alignItems: "flex-start", gap: 8, padding: "6px 8px", borderRadius: 6, opacity: step.completed ? 0.5 : 1, background: isOverdue ? "rgba(239,68,68,0.06)" : "transparent" }}>
+                              <button onClick={function() { toggleWorkflowStep(wf.id, idx); }} style={{ background: "none", border: "none", cursor: "pointer", color: step.completed ? "#10b981" : isOverdue ? "#ef4444" : "#475569", padding: 0, marginTop: 1 }}><CheckCircle size={14} /></button>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, color: step.completed ? "#94a3b8" : "#e2e8f0", textDecoration: step.completed ? "line-through" : "none", fontWeight: 500 }}>{step.label}</div>
+                                <div style={{ fontSize: 11, color: "#64748b" }}>{step.desc}</div>
+                              </div>
+                              <div style={{ fontSize: 11, color: isOverdue ? "#f87171" : "#64748b", whiteSpace: "nowrap" }}>{formatDateShort(step.targetDate)} {isOverdue && " \u26a0\ufe0f"}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -1216,7 +1386,7 @@ function SentinelCRM() {
       {toast && <div style={{ position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "#15803d", color: "#fff", padding: "10px 24px", borderRadius: 10, fontSize: 13, fontWeight: 600, zIndex: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.5)" }}>{toast}</div>}
 
       <header style={st.header}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}><Shield size={20} color="#3b82f6" /><div><div style={{ fontSize: 17, fontWeight: 700, color: "#f8fafc", letterSpacing: "-0.02em" }}>{"Sentinel CRM"}</div><div style={{ fontSize: 10, color: "#64748b", fontWeight: 500 }}>{"Commercial & Sales Management"}</div></div></div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}><img src={"data:image/png;base64,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"} alt="Sentinel Insurance" style={{ height: 32, mixBlendMode: "screen" }} /><div style={{ fontSize: 10, color: "#64748b", fontWeight: 500 }}>{"Service & Sales Management"}</div></div>
         <nav style={st.nav}>
           {NAV_ITEMS.map(function(item) {
             var IconComp = item.Icon;
@@ -1247,15 +1417,31 @@ function SentinelCRM() {
       {modal === "add-activity-client" && <ActivityForm clientId={selectedClientId} />}
       {modal === "add-activity-prospect" && <ActivityForm prospectId={selectedProspectId} />}
       {modal === "add-followup" && <FollowUpForm clientId={selectedClientId} />}
+      {modal === "add-document" && <DocumentForm clientId={selectedClientId} />}
+      {modal === "start-workflow" && (
+        <ModalWrap title="Start Renewal Workflow">
+          <p style={{ fontSize: 13, color: "#94a3b8", marginBottom: 14 }}>{"Select a commercial policy to start a 150-day renewal marketing workflow:"}</p>
+          <div style={{ display: "grid", gap: 8 }}>
+            {clientPolicies.filter(function(p) { return p.status === "active" && p.expirationDate; }).map(function(p) {
+              var existing = (data.renewalWorkflows || []).find(function(w) { return w.policyId === p.id; });
+              return (
+                <button key={p.id} disabled={!!existing} onClick={function() { addRenewalWorkflow(p.id); setModal(null); }} style={{ ...st.row, justifyContent: "space-between", border: "1px solid #1e293b", cursor: existing ? "default" : "pointer", opacity: existing ? 0.4 : 1 }}>
+                  <div><div style={{ fontSize: 14, fontWeight: 600, color: "#e2e8f0" }}>{p.coverageType + " - " + p.carrier}</div><div style={{ fontSize: 11, color: "#64748b" }}>{"Exp: " + formatDateShort(p.expirationDate) + " (" + String(daysUntil(p.expirationDate)) + " days)"}</div></div>
+                  <span style={{ fontSize: 11, color: existing ? "#64748b" : "#f59e0b" }}>{existing ? "Already started" : "Start \u2192"}</span>
+                </button>
+              );
+            })}
+          </div>
+        </ModalWrap>
+      )}
       {modal === "add-prospect" && <ProspectForm onSave={addProspect} />}
       {modal === "edit-prospect" && editItem && <ProspectForm prospect={editItem} onSave={updateProspect} />}
       {modal === "export" && <ExportModal />}
-      <EmailComposeModal />
     </div>
   );
 }
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<SentinelCRM />);
+    ReactDOM.createRoot(document.getElementById('root')).render(<PasswordGate><SentinelCRM /></PasswordGate>);
   </script>
 </body>
 </html>
